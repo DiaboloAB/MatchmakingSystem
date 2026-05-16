@@ -14,11 +14,18 @@ pub enum ServerMessage {
     },
     Lobby {
         lobby_id: Uuid,
-        players: Vec<Uuid>,
+        players: Vec<String>,
         status: String,
     },
     LobbyLeft {
         lobby_id: Uuid,
+    },
+    Researching {
+        lobby_id: Uuid,
+    },
+    ResearchCancelled {
+        lobby_id: Uuid,
+        player_cancelling_id: String,
     },
     GameFound {
         match_id: Uuid,
@@ -26,8 +33,8 @@ pub enum ServerMessage {
     Error {
         message: String,
     },
-    Help {
-        commands: Vec<(&'static str, &'static str)>,
+    Info {
+        message: String,
     },
 }
 

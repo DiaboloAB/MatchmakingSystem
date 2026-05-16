@@ -2,22 +2,14 @@ use std::time::Duration;
 
 use axum::{
     extract::{
-        Path, State, WebSocketUpgrade,
+        State, WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
     response::Response,
 };
-use futures::{SinkExt, StreamExt};
 use serde::Serialize;
-use sqlx::SqlitePool;
-use tokio::sync::{RwLock, mpsc};
-use uuid::Uuid;
 
-use crate::{
-    app_state::AppState,
-    messages::{ClientMessage, ServerMessage},
-    structs::{Lobby, LobbyStatus, Player, PlayerStatus},
-};
+use crate::{app_state::AppState, structs::LobbyStatus};
 
 #[derive(Serialize, Clone, Default)]
 pub struct DashboardSnapshot {

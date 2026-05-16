@@ -5,16 +5,15 @@ use tokio::signal;
 
 use crate::{
     app_state::AppState,
-    dashboard::{dashboard_broadcast_loop, dashboard_ws_handler},
+    dashboard::socket::{dashboard_broadcast_loop, dashboard_ws_handler},
     matchmaking::matchmaking_loop,
-    socket::{ws_handler, ws_handler_new},
+    player_connection::socket::{ws_handler, ws_handler_new},
 };
 
 mod app_state;
 mod dashboard;
 mod matchmaking;
-mod messages;
-mod socket;
+mod player_connection;
 mod structs;
 
 #[derive(Parser, Debug)]
