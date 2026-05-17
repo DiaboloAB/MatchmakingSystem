@@ -9,7 +9,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::{app_state::AppState, structs::LobbyStatus};
+use crate::app_state::AppState;
 
 #[derive(Serialize, Clone, Default)]
 pub struct DashboardSnapshot {
@@ -43,16 +43,13 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
 
         let total_player = state.total_player.read().await;
         let players = state.players.read().await;
-        let lobby = state.lobby.read().await;
+        let lobby = state.lobbys.read().await;
 
         let snapshot = DashboardSnapshot {
             total_player: *total_player,
             connected_players: players.len(),
             lobby_number: lobby.len(),
-            game_number: lobby
-                .values()
-                .filter(|l| l.status == LobbyStatus::InGame)
-                .count(),
+            game_number: 0,
         };
 
         let _ = state.dashboard_tx.send(snapshot);

@@ -5,12 +5,14 @@ use tokio::signal;
 
 use crate::{
     app_state::AppState,
+    confirmation::confirmation_loop,
     dashboard::socket::{dashboard_broadcast_loop, dashboard_ws_handler},
     matchmaking::matchmaking_loop,
     player_connection::socket::{ws_handler, ws_handler_new},
 };
 
 mod app_state;
+mod confirmation;
 mod dashboard;
 mod matchmaking;
 mod player_connection;
@@ -50,6 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState::new(db, total_player);
 
     tokio::spawn(matchmaking_loop(state.clone()));
+    tokio::spawn(confirmation_loop(state.clone()));
     tokio::spawn(dashboard_broadcast_loop(state.clone()));
 
     let app = Router::new()

@@ -48,9 +48,16 @@ impl Player {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum PlayerStatus {
     Idle,
-    InQueue,
-    InGame { match_id: Uuid },
-    Finished,
+    InQueue {
+        #[serde(skip_serializing)]
+        queue_time: std::time::Instant,
+    },
+    NeedConfirmation {
+        game_id: Uuid,
+    },
+    InGame {
+        match_id: Uuid,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -58,7 +65,7 @@ pub struct Lobby {
     pub id: Uuid,
     pub players: Vec<Uuid>,
     pub owner: Uuid,
-    pub status: LobbyStatus,
+    pub status: PlayerStatus,
 }
 
 impl Lobby {
@@ -67,31 +74,68 @@ impl Lobby {
             id,
             players: vec![],
             owner,
-            status: LobbyStatus::Idle,
+            status: PlayerStatus::Idle,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub enum LobbyStatus {
-    Idle,
-    InQueue {
-        #[serde(skip_serializing)]
-        queue_time: std::time::Instant,
-    },
-    FoundMatch {
-        match_id: Uuid,
-    },
-    InGame,
-}
-
-impl Display for LobbyStatus {
+impl Display for PlayerStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LobbyStatus::Idle => write!(f, "Idle"),
-            LobbyStatus::InQueue { .. } => write!(f, "In Queue"),
-            LobbyStatus::FoundMatch { .. } => write!(f, "Match Found"),
-            LobbyStatus::InGame => write!(f, "In Game"),
+            PlayerStatus::Idle => write!(f, "Idle"),
+            PlayerStatus::InQueue { .. } => write!(f, "In Queue"),
+            PlayerStatus::NeedConfirmation { .. } => write!(f, "Need Confirmation"),
+            PlayerStatus::InGame { .. } => write!(f, "In Game"),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct QueueEntry {
+    pub start_time: std::time::Instant,
+    pub lobby_id: Uuid,
+    pub avg_mmr: f64,
+    pub player_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Game {
+    pub id: Uuid,
+    pub team1: Vec<Uuid>,
+    pub team2: Vec<Uuid>,
+    pub lobbys: Vec<Uuid>,
+    pub confirmed: Vec<Uuid>,
+    pub start_time: std::time::Instant,
+    pub status: GameStatus,
+}
+
+impl Game {
+    pub fn new(id: Uuid, team1: Vec<Uuid>, team2: Vec<Uuid>, lobbys: Vec<Uuid>) -> Self {
+        Self {
+            id,
+            team1,
+            team2,
+            lobbys,
+            start_time: std::time::Instant::now(),
+            status: GameStatus::WaitingForConfirmation,
+            confirmed: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GameStatus {
+    WaitingForConfirmation,
+    Ongoing,
+    Finished,
+}
+
+#[derive(Debug, Clone)]
+pub struct GameResult {
+    pub id: Uuid,
+    pub team1: Vec<(Uuid, f32)>,
+    pub team2: Vec<(Uuid, f32)>,
+    pub winner: u8,
+    pub start_time: std::time::Instant,
+    pub duration: std::time::Duration,
 }

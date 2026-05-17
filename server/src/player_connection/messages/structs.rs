@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::structs::Player;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum ServerMessage {
     Welcome {
@@ -20,15 +20,22 @@ pub enum ServerMessage {
     LobbyLeft {
         lobby_id: Uuid,
     },
-    Researching {
+    SearchingGame {
         lobby_id: Uuid,
+        player_searching: String,
     },
-    ResearchCancelled {
+    SearchCancelled {
         lobby_id: Uuid,
-        player_cancelling_id: String,
+        player_cancelling: String,
     },
     GameFound {
-        match_id: Uuid,
+        game_id: Uuid,
+    },
+    GameStarting {
+        game_id: Uuid,
+    },
+    GameCancelled {
+        game_id: Uuid,
     },
     Error {
         message: String,
@@ -41,11 +48,12 @@ pub enum ServerMessage {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
+    DisplayPlayer { id: Option<Uuid> },
     JoinLobby { id: Option<Uuid> },
     DisplayLobby,
     LeaveLobby,
-    FindGame,
+    SearchGame,
     CancelSearch,
-    ConfirmGame { match_id: Uuid },
+    ConfirmGame { id: Uuid },
     Help,
 }

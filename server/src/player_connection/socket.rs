@@ -14,7 +14,7 @@ use crate::{
     player_connection::{
         db::{db_load_player, db_save_player},
         messages::{
-            game::{cancel_research, find_game},
+            game::{cancel_research, confirm_game, find_game},
             help::help,
             lobby::{create_new_lobby, display_lobby, join_existing_lobby, leave_lobby},
             structs::{ClientMessage, ServerMessage},
@@ -123,10 +123,11 @@ async fn handle_message(player_id: Uuid, text: &str, state: &AppState) {
             Some(lobby_id) => join_existing_lobby(player, lobby_id, state).await,
             None => create_new_lobby(player, state).await,
         },
-        ClientMessage::DisplayLobby => display_lobby(player_id, state).await,
+        ClientMessage::DisplayLobby => display_lobby(player, state).await,
         ClientMessage::LeaveLobby => leave_lobby(player, state).await,
-        ClientMessage::FindGame => find_game(player_id, state).await,
-        ClientMessage::CancelSearch => cancel_research(player_id, state).await,
+        ClientMessage::SearchGame => find_game(player, state).await,
+        ClientMessage::CancelSearch => cancel_research(player, state).await,
+        ClientMessage::ConfirmGame { id } => confirm_game(player, id, state).await,
         _ => help(player_id, state).await,
     }
 }

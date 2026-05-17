@@ -8,23 +8,24 @@ use uuid::Uuid;
 use crate::{
     dashboard::socket::DashboardSnapshot,
     player_connection::messages::structs::ServerMessage,
-    structs::{Lobby, Player},
+    structs::{Game, Lobby, Player, PlayerStatus, QueueEntry},
 };
 
 // type PlayerTx = mpsc::UnboundedSender<ServerMessage>;
 
 pub struct Settings {
-    lobby_capacity: usize,
-    team_size: usize,
-    ranks: Vec<String>,
-    div_number: usize,
+    pub lobby_capacity: usize,
+    pub team_size: usize,
+    pub ranks: Vec<String>,
+    pub div_number: usize,
+    pub points_per_div: usize,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            lobby_capacity: 10,
-            team_size: 5,
+            lobby_capacity: 1,
+            team_size: 1,
             ranks: vec![
                 "Unranked".to_string(),
                 "Iron".to_string(),
@@ -39,6 +40,7 @@ impl Default for Settings {
                 "Challenger".to_string(),
             ],
             div_number: 4,
+            points_per_div: 100,
         }
     }
 }
@@ -49,7 +51,10 @@ pub struct AppState {
     pub players: Arc<RwLock<HashMap<Uuid, Player>>>,
     pub senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<ServerMessage>>>>,
     pub db: SqlitePool,
-    pub lobby: Arc<RwLock<HashMap<Uuid, Lobby>>>,
+    pub lobbys: Arc<RwLock<HashMap<Uuid, Lobby>>>,
+    pub queueing_lobbys: Arc<RwLock<Vec<QueueEntry>>>,
+    pub waiting_games: Arc<RwLock<HashMap<Uuid, Game>>>,
+    pub ongoing_games: Arc<RwLock<HashMap<Uuid, Game>>>,
 
     pub dashboard_tx: broadcast::Sender<DashboardSnapshot>,
     pub settings: Arc<RwLock<Settings>>,
@@ -64,7 +69,10 @@ impl AppState {
             total_player: Arc::new(RwLock::new(total_player)),
             players: Arc::new(RwLock::new(HashMap::new())),
             senders: Arc::new(RwLock::new(HashMap::new())),
-            lobby: Arc::new(RwLock::new(HashMap::new())),
+            lobbys: Arc::new(RwLock::new(HashMap::new())),
+            queueing_lobbys: Arc::new(RwLock::new(Vec::new())),
+            waiting_games: Arc::new(RwLock::new(HashMap::new())),
+            ongoing_games: Arc::new(RwLock::new(HashMap::new())),
             db,
             dashboard_tx,
             settings: Arc::new(RwLock::new(Settings::default())),
@@ -75,6 +83,50 @@ impl AppState {
         let senders = self.senders.read().await;
         if let Some(tx) = senders.get(&player_id) {
             let _ = tx.send(msg);
+        }
+    }
+
+    pub async fn send_to_players(&self, player_ids: Vec<Uuid>, msg: ServerMessage) {
+        for player_id in player_ids {
+            self.send_to(player_id, msg.clone()).await;
+        }
+    }
+
+    pub async fn queue_lobby(&self, entry: QueueEntry) {
+        let mut queueing_lobbys = self.queueing_lobbys.write().await;
+        queueing_lobbys.push(entry);
+    }
+
+    pub async fn dequeue_lobby(&self, lobby_id: Uuid) {
+        let mut queueing_lobbys = self.queueing_lobbys.write().await;
+        if let Some(pos) = queueing_lobbys
+            .iter()
+            .position(|entry| entry.lobby_id == lobby_id)
+        {
+            queueing_lobbys.remove(pos);
+        }
+    }
+
+    pub async fn update_lobby_status(&self, lobby_id: Uuid, status: PlayerStatus) {
+        let player_ids = {
+            let mut lobbys = self.lobbys.write().await;
+            let lobby = match lobbys.get_mut(&lobby_id) {
+                Some(l) => l,
+                None => return,
+            };
+            lobby.status = status.clone();
+            lobby.players.clone()
+        };
+
+        self.update_players_status(player_ids, status).await;
+    }
+
+    pub async fn update_players_status(&self, player_ids: Vec<Uuid>, status: PlayerStatus) {
+        let mut players = self.players.write().await;
+        for player_id in player_ids {
+            if let Some(p) = players.get_mut(&player_id) {
+                p.status = status.clone();
+            }
         }
     }
 }
