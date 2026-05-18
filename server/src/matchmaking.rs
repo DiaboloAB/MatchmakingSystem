@@ -51,20 +51,24 @@ async fn try_form_matches(state: &AppState) {
                     let lobbys = state.lobbys.write().await;
                     let l1 = lobbys.get(&lobby1.lobby_id).unwrap();
                     let l2 = lobbys.get(&lobby2.lobby_id).unwrap();
+
+                    let l1players = l1.players.clone();
+                    let l2players = l2.players.clone();
+                    drop(lobbys);
                     let game = Game::new(
                         game_id,
-                        l1.players.clone(),
-                        l2.players.clone(),
+                        l1players.clone(),
+                        l2players.clone(),
                         vec![lobby1.lobby_id, lobby2.lobby_id],
                     );
+                    state
+                        .send_to_players(game.team1.clone(), ServerMessage::GameFound { game_id })
+                        .await;
+                    state
+                        .send_to_players(game.team2.clone(), ServerMessage::GameFound { game_id })
+                        .await;
                     let mut waiting_games = state.waiting_games.write().await;
                     waiting_games.insert(game.id, game.clone());
-                    state
-                        .send_to_players(l1.players.clone(), ServerMessage::GameFound { game_id })
-                        .await;
-                    state
-                        .send_to_players(l2.players.clone(), ServerMessage::GameFound { game_id })
-                        .await;
                 }
 
                 state

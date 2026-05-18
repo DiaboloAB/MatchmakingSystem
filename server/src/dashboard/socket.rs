@@ -2,22 +2,19 @@ use std::time::Duration;
 
 use axum::{
     extract::{
-        State, WebSocketUpgrade,
+        Path, State, WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
     response::Response,
 };
-use serde::Serialize;
+use futures::{SinkExt, StreamExt};
+use tokio::sync::mpsc;
+use uuid::Uuid;
 
-use crate::app_state::AppState;
-
-#[derive(Serialize, Clone, Default)]
-pub struct DashboardSnapshot {
-    total_player: usize,
-    connected_players: usize,
-    lobby_number: usize,
-    game_number: usize,
-}
+use crate::{
+    app_state::AppState,
+    dashboard::messages::structs::{DashboardServerMessage, DashboardSnapshot},
+};
 
 pub async fn dashboard_ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     log::info!("Dashboard connected");
@@ -25,13 +22,34 @@ pub async fn dashboard_ws_handler(ws: WebSocketUpgrade, State(state): State<AppS
 }
 
 async fn handle_dashboard_connection(mut socket: WebSocket, state: AppState) {
-    let mut rx = state.dashboard_tx.subscribe();
+    let (mut ws_tx, mut ws_rx) = socket.split();
+    let (tx, mut rx) = mpsc::unbounded_channel::<DashboardServerMessage>();
 
-    while let Ok(snapshot) = rx.recv().await {
-        let json = serde_json::to_string(&snapshot).unwrap();
-        if socket.send(Message::Text(json.into())).await.is_err() {
-            break;
+    *state.dashboard_tx.write().await = tx;
+    // let mut rx = state.dashboard_tx.subscribe();
+
+    let mut send_task = tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            let json = serde_json::to_string(&msg).unwrap();
+            if ws_tx.send(Message::Text(json.into())).await.is_err() {
+                break;
+            }
         }
+    });
+
+    let state_clone = state.clone();
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = ws_rx.next().await {
+            if let Message::Text(text) = msg {
+                log::info!("Received from dashboard: {}", text);
+            }
+        }
+        log::info!("Dashboard disconnected");
+    });
+
+    tokio::select! {
+        _ = &mut send_task => recv_task.abort(),
+        _ = &mut recv_task => send_task.abort(),
     }
 
     log::info!("Dashboard disconnected");
@@ -43,15 +61,20 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
 
         let total_player = state.total_player.read().await;
         let players = state.players.read().await;
-        let lobby = state.lobbys.read().await;
+        let lobbys = state.lobbys.read().await;
+        let games = state.ongoing_games.read().await;
 
         let snapshot = DashboardSnapshot {
             total_player: *total_player,
             connected_players: players.len(),
-            lobby_number: lobby.len(),
-            game_number: 0,
+            lobby_number: lobbys.len(),
+            game_number: games.len(),
         };
 
-        let _ = state.dashboard_tx.send(snapshot);
+        let _ = state
+            .dashboard_tx
+            .write()
+            .await
+            .send(DashboardServerMessage::Snapshot { snapshot });
     }
 }

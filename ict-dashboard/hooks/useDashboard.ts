@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
+//{"type":"Snapshot","snapshot":{"total_player":49,"connected_players":0,"lobby_number":0,"game_number":0}}
 export interface DashboardSnapshot {
     total_player: number
     connected_players: number
@@ -52,8 +53,11 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
 
         ws.onmessage = (event) => {
             try {
-                const snapshot = JSON.parse(event.data) as DashboardSnapshot
-                setData(snapshot)
+                console.log("Received dashboard message:", event.data)
+                const message = JSON.parse(event.data) as { type: string; snapshot: DashboardSnapshot }
+                if (message.type === "Snapshot") {
+                    setData(message.snapshot)
+                }
             } catch {
                 console.error("Failed to parse snapshot", event.data)
             }

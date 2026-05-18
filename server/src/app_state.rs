@@ -6,7 +6,7 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 use uuid::Uuid;
 
 use crate::{
-    dashboard::socket::DashboardSnapshot,
+    dashboard::messages::structs::{DashboardServerMessage, DashboardSnapshot},
     player_connection::messages::structs::ServerMessage,
     structs::{Game, Lobby, Player, PlayerStatus, QueueEntry},
 };
@@ -56,15 +56,13 @@ pub struct AppState {
     pub waiting_games: Arc<RwLock<HashMap<Uuid, Game>>>,
     pub ongoing_games: Arc<RwLock<HashMap<Uuid, Game>>>,
 
-    pub dashboard_tx: broadcast::Sender<DashboardSnapshot>,
+    pub dashboard_tx: Arc<RwLock<mpsc::UnboundedSender<DashboardServerMessage>>>,
     pub settings: Arc<RwLock<Settings>>,
     // pub queue: Arc<RwLock<Vec<Uuid>>>,
 }
 
 impl AppState {
     pub fn new(db: SqlitePool, total_player: usize) -> Self {
-        let (dashboard_tx, _) = broadcast::channel(5);
-
         Self {
             total_player: Arc::new(RwLock::new(total_player)),
             players: Arc::new(RwLock::new(HashMap::new())),
@@ -74,7 +72,9 @@ impl AppState {
             waiting_games: Arc::new(RwLock::new(HashMap::new())),
             ongoing_games: Arc::new(RwLock::new(HashMap::new())),
             db,
-            dashboard_tx,
+            dashboard_tx: Arc::new(RwLock::new(
+                mpsc::unbounded_channel::<DashboardServerMessage>().0,
+            )),
             settings: Arc::new(RwLock::new(Settings::default())),
         }
     }

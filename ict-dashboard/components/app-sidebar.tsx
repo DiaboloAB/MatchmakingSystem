@@ -31,6 +31,30 @@ const data = {
       ),
     },
     {
+      title: "Players",
+      url: "players",
+      icon: (
+        <UsersIcon
+        />
+      ),
+    },
+    {
+      title: "Lobbies",
+      url: "lobbies",
+      icon: (
+        <ChartBarIcon
+        />
+      ),
+    },
+    {
+      title: "Games",
+      url: "games",
+      icon: (
+        <ListIcon
+        />
+      ),
+    },
+    {
       title: "Server Settings",
       url: "settings",
       icon: (

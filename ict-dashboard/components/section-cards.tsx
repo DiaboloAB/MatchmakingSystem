@@ -44,9 +44,9 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>New Customers</CardDescription>
+          <CardDescription>Number of Lobbies</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            1,234
+            {data ? `Lobbies: ${data.lobby_number}` : "No data"}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -68,9 +68,9 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
+          <CardDescription>Number of Games</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45,678
+            {data ? `Games: ${data.game_number}` : "No data"}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
