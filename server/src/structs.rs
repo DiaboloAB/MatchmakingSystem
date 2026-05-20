@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
 use names::{Generator, Name};
+use rand::{Rng, RngExt, rng};
+use random_word::Lang;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -27,8 +29,12 @@ pub struct Player {
     pub mmr: f64,
     pub rank: u8,
     pub div: u8,
+    pub points: u32,
     pub status: PlayerStatus,
     pub lobby: Option<Uuid>,
+
+    // simulation-only fields
+    pub skills: Vec<String>,
 }
 
 impl Player {
@@ -39,10 +45,22 @@ impl Player {
             mmr: 1000.0,
             rank: 0,
             div: 4,
+            points: 0,
             status: PlayerStatus::Idle,
             lobby: None,
+            skills: create_skill_set(),
         }
     }
+}
+
+// For simulation purposes, we assign each player a random set of skills from a predefined pool
+pub fn create_skill_set() -> Vec<String> {
+    let nb_skills = rng().random_range(3..6);
+    let mut skills = Vec::new();
+    for _ in 0..nb_skills {
+        skills.push(random_word::get(random_word::Lang::En).to_string());
+    }
+    skills
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -56,7 +74,7 @@ pub enum PlayerStatus {
         game_id: Uuid,
     },
     InGame {
-        match_id: Uuid,
+        game_id: Uuid,
     },
 }
 
@@ -98,7 +116,7 @@ pub struct QueueEntry {
     pub player_count: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Game {
     pub id: Uuid,
     pub team1: Vec<Uuid>,

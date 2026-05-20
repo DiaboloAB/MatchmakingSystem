@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+random_word = { version = "0.5.2", features = ["en"] }
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio"] }
 tokio = { version = "1.52.1", features = ["full"] }
 clap = { version = "4.6.1", features = ["derive"] }
@@ -15,3 +16,4 @@ axum = { version = "0.8.9", features = ["ws"] }
 futures = "0.3.32"
 serde_json = "1.0.149"
 names = "0.14.0"
+rand = "0.10.1"

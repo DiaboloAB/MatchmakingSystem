@@ -55,5 +55,4 @@ pub enum ClientMessage {
     SearchGame,
     CancelSearch,
     ConfirmGame { id: Uuid },
-    Help,
 }

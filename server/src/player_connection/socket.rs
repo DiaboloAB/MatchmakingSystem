@@ -15,7 +15,6 @@ use crate::{
         db::{db_load_player, db_save_player},
         messages::{
             game::{cancel_research, confirm_game, find_game},
-            help::help,
             lobby::{create_new_lobby, display_lobby, join_existing_lobby, leave_lobby},
             structs::{ClientMessage, ServerMessage},
         },
@@ -32,7 +31,10 @@ pub async fn ws_handler(
     ws.on_upgrade(move |socket| handle_connection(socket, player_id, state))
 }
 
-pub async fn ws_handler_new(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
+pub async fn ws_handler_new_player(
+    ws: WebSocketUpgrade,
+    State(state): State<AppState>,
+) -> Response {
     let player_id = Uuid::new_v4();
     log::info!("Player {} connected", player_id);
     ws.on_upgrade(move |socket| handle_connection(socket, player_id, state))
@@ -128,6 +130,8 @@ async fn handle_message(player_id: Uuid, text: &str, state: &AppState) {
         ClientMessage::SearchGame => find_game(player, state).await,
         ClientMessage::CancelSearch => cancel_research(player, state).await,
         ClientMessage::ConfirmGame { id } => confirm_game(player, id, state).await,
-        _ => help(player_id, state).await,
+        _ => {
+            log::warn!("Unhandled message from {}: {}", player_id, text);
+        }
     }
 }

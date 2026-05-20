@@ -47,10 +47,9 @@ const statusConfig = {
     icon: AlertCircleIcon,
     className: "fill-red-500 dark:fill-red-400 text-red-500",
   },
-} as const; // Typescript safety
+} as const;
 
 export function StatusBadge({ status }: { status: keyof typeof statusConfig }) {
-  // 2. Grab the correct configuration based on the current status
   const { icon: Icon, className } = statusConfig[status];
 
   return (

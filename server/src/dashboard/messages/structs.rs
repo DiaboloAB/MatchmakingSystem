@@ -25,8 +25,8 @@ pub enum DashboardServerMessage {
         players: Vec<Player>,
     },
     LobbyList {
-        lobbies: Vec<Lobby>,
-        queueing_lobbies: Vec<QueueEntrySnapshot>,
+        lobbys: Vec<Lobby>,
+        queueing_lobby: Vec<QueueEntrySnapshot>,
     },
     GameList {
         waiting_games: Vec<GameSnapshot>,
@@ -40,11 +40,16 @@ pub enum DashboardServerMessage {
 pub struct DashboardSnapshot {
     pub total_player: usize,
     pub connected_players: usize,
+
+    // pub idle_players: usize,
+    // pub queueing_players: usize,
+    // pub need_confirmation_players: usize,
+    // pub in_game_players: usize,
     pub lobby_number: usize,
     pub game_number: usize,
-    // pub queueing_lobbies: usize,
-    // pub waiting_games: usize,
-    // pub ongoing_games: usize,
+    pub queueing_lobbies: usize,
+    pub waiting_games: usize,
+    pub ongoing_games: usize,
 }
 
 // ─── Serializable wrappers for types that contain Instant ────────────────────
@@ -78,15 +83,15 @@ pub struct GameSnapshot {
     pub elapsed_seconds: u64,
 }
 
-impl From<&Game> for GameSnapshot {
-    fn from(g: &Game) -> Self {
-        Self {
-            id: g.id,
-            team1: g.team1.clone(),
-            team2: g.team2.clone(),
-            lobbys: g.lobbys.clone(),
-            confirmed: g.confirmed.clone(),
-            elapsed_seconds: g.start_time.elapsed().as_secs(),
+impl From<Game> for GameSnapshot {
+    fn from(game: Game) -> Self {
+        GameSnapshot {
+            id: game.id,
+            team1: game.team1.clone(),
+            team2: game.team2.clone(),
+            lobbys: game.lobbys.clone(),
+            confirmed: game.confirmed.clone(),
+            elapsed_seconds: game.start_time.elapsed().as_secs(),
         }
     }
 }

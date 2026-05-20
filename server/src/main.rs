@@ -8,7 +8,7 @@ use crate::{
     confirmation::confirmation_loop,
     dashboard::socket::{dashboard_broadcast_loop, dashboard_ws_handler},
     matchmaking::matchmaking_loop,
-    player_connection::socket::{ws_handler, ws_handler_new},
+    player_connection::socket::{ws_handler, ws_handler_new_player},
 };
 
 mod app_state;
@@ -38,7 +38,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             name TEXT NOT NULL,
             mmr REAL NOT NULL DEFAULT 1000.0,
             rank INTEGER NOT NULL DEFAULT 0,
-            div  INTEGER NOT NULL DEFAULT 1
+            div  INTEGER NOT NULL DEFAULT 1,
+            points INTEGER NOT NULL DEFAULT 0,
+            skills TEXT NOT NULL DEFAULT '[]'
         )",
     )
     .execute(&db)
@@ -57,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/ws/{player_id}", get(ws_handler))
-        .route("/ws_new/", get(ws_handler_new))
+        .route("/ws/", get(ws_handler_new_player))
         .route("/ws/dashboard", get(dashboard_ws_handler)) // Add this line
         .with_state(state);
 

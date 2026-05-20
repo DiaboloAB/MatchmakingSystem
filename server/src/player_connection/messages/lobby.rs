@@ -34,7 +34,9 @@ pub async fn create_new_lobby(player: Player, state: &AppState) {
 pub async fn join_existing_lobby(player: Player, lobby_id: Uuid, state: &AppState) {
     log::info!("Player {} joining lobby {}", player.name, lobby_id);
 
-    leave_lobby(player.clone(), state).await;
+    if let Some(_) = player.lobby {
+        leave_lobby(player.clone(), state).await;
+    }
 
     if player.status != PlayerStatus::Idle {
         state

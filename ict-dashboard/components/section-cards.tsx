@@ -9,107 +9,116 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
-import { useServer } from "./server-provider"
+import { UsersIcon, SwordsIcon, ClockIcon, ActivityIcon } from "lucide-react"
+import { useServer } from "@/components/server-provider"
 
 export function SectionCards() {
-  const { data, status, port, setPort, connect } = useServer()
-  { data ? `Players: ${data.connected_players}/${data.total_player}` : "No data" }
+  const { data, queueList, playerList } = useServer()
+
+  // --- Calculations ---
+  // 1. Players currently in queue
+  const playersInQueue = queueList?.reduce((acc, curr) => acc + curr.player_count, 0) || 0
+
+  // 2. Average Queue Time
+  const avgQueueSeconds = queueList?.length
+    ? Math.floor(queueList.reduce((acc, curr) => acc + curr.queue_seconds, 0) / queueList.length)
+    : 0
+  const avgQueueText = avgQueueSeconds > 60
+    ? `${Math.floor(avgQueueSeconds / 60)}m ${avgQueueSeconds % 60}s`
+    : `${avgQueueSeconds}s`
+
+  // 3. Online Players percentage
+  const onlinePercentage = data?.total_player
+    ? Math.round((data.connected_players / data.total_player) * 100)
+    : 0
 
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+
+      {/* CARD 1: Server Population */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Total Players</CardDescription>
+          <CardDescription>Online Players</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {data ? `Players: ${data.connected_players}/${data.total_player}` : "No data"}
+            {data ? data.connected_players : 0}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +12.5%
+            <Badge variant="outline" className="font-mono">
+              <UsersIcon className="mr-1 size-3" />
+              {data ? data.total_player : 0} Total
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month{" "}
-            <TrendingUpIcon className="size-4" />
-          </div>
           <div className="text-muted-foreground">
-            Total players count in the db
+            {onlinePercentage}% of userbase online
           </div>
         </CardFooter>
       </Card>
+
+      {/* CARD 2: Matchmaking Health */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Number of Lobbies</CardDescription>
+          <CardDescription>Avg. Wait Time</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {data ? `Lobbies: ${data.lobby_number}` : "No data"}
+            {avgQueueText}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingDownIcon
-              />
-              -20%
+            <Badge variant="outline" className={avgQueueSeconds > 120 ? "text-yellow-500" : "text-green-500"}>
+              <ClockIcon className="mr-1 size-3" />
+              Live
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period{" "}
-            <TrendingDownIcon className="size-4" />
-          </div>
           <div className="text-muted-foreground">
-            Acquisition needs attention
+            Across {queueList?.length || 0} active lobbies
           </div>
         </CardFooter>
       </Card>
+
+      {/* CARD 3: Queue Volume */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Number of Games</CardDescription>
+          <CardDescription>Players in Queue</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {data ? `Games: ${data.game_number}` : "No data"}
+            {playersInQueue}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +12.5%
+              <ActivityIcon className="mr-1 size-3" />
+              Matchmaking
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention{" "}
-            <TrendingUpIcon className="size-4" />
+          <div className="text-muted-foreground">
+            Waiting for a match
           </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
         </CardFooter>
       </Card>
+
+      {/* CARD 4: Active Matches */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Growth Rate</CardDescription>
+          <CardDescription>Active Games</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            4.5%
+            {data ? data.game_number : 0}
           </CardTitle>
           <CardAction>
-            <Badge variant="outline">
-              <TrendingUpIcon
-              />
-              +4.5%
+            <Badge variant="outline" className="text-red-500">
+              <SwordsIcon className="mr-1 size-3" />
+              In Progress
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance increase{" "}
-            <TrendingUpIcon className="size-4" />
+          <div className="text-muted-foreground">
+            Currently being played
           </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
         </CardFooter>
       </Card>
+
     </div>
   )
 }
