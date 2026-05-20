@@ -7,6 +7,7 @@ use crate::{
     app_state::AppState,
     confirmation::confirmation_loop,
     dashboard::socket::{dashboard_broadcast_loop, dashboard_ws_handler},
+    match_simulation::game_simulation_loop,
     matchmaking::matchmaking_loop,
     player_connection::socket::{ws_handler, ws_handler_new_player},
 };
@@ -14,6 +15,7 @@ use crate::{
 mod app_state;
 mod confirmation;
 mod dashboard;
+mod match_simulation;
 mod matchmaking;
 mod player_connection;
 mod structs;
@@ -37,10 +39,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             id   TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             mmr REAL NOT NULL DEFAULT 1000.0,
-            rank INTEGER NOT NULL DEFAULT 0,
-            div  INTEGER NOT NULL DEFAULT 1,
-            points INTEGER NOT NULL DEFAULT 0,
+            wins TEXT NOT NULL DEFAULT '[]',
+            losses TEXT NOT NULL DEFAULT '[]',
             skills TEXT NOT NULL DEFAULT '[]'
+        )",
+    )
+    .execute(&db)
+    .await?;
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS games (
+            id TEXT PRIMARY KEY,
+            team1 TEXT NOT NULL,
+            team2 TEXT NOT NULL,
+            winner INTEGER,
+            start_time INTEGER NOT NULL,
+            end_time INTEGER
         )",
     )
     .execute(&db)
@@ -56,6 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(matchmaking_loop(state.clone()));
     tokio::spawn(confirmation_loop(state.clone()));
     tokio::spawn(dashboard_broadcast_loop(state.clone()));
+    tokio::spawn(game_simulation_loop(state.clone()));
 
     let app = Router::new()
         .route("/ws/{player_id}", get(ws_handler))

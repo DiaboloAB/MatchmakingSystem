@@ -68,9 +68,6 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
         let players = state.players.read().await;
         let lobbys = state.lobbys.read().await;
         let games = state.ongoing_games.read().await;
-        // let queueing_lobbys = state.queueing_lobbys.read().await;
-        // let ongoing_games = state.ongoing_games.read().await;
-        // let waiting_games = state.waiting_games.read().await;
 
         let snapshot = DashboardSnapshot {
             total_player: *total_player,
@@ -80,10 +77,6 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
             queueing_lobbies: 0,
             waiting_games: 0,
             ongoing_games: 0,
-            // game_number: games.len() + waiting_games.len(),
-            // queueing_lobbies: queueing_lobbys.len(),
-            // waiting_games: waiting_games.len(),
-            // ongoing_games: ongoing_games.len(),
         };
 
         let _ = state

@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     dashboard::messages::structs::{DashboardServerMessage, DashboardSnapshot},
     player_connection::messages::structs::ServerMessage,
-    structs::{Game, Lobby, Player, PlayerStatus, QueueEntry},
+    structs::{Game, GameStatus, Lobby, Player, PlayerStatus, QueueEntry},
 };
 
 // type PlayerTx = mpsc::UnboundedSender<ServerMessage>;
@@ -19,6 +19,9 @@ pub struct Settings {
     pub ranks: Vec<String>,
     pub div_number: usize,
     pub points_per_div: usize,
+
+    // settings for simulation
+    pub simulation_speed: f32,
 }
 
 impl Default for Settings {
@@ -41,6 +44,8 @@ impl Default for Settings {
             ],
             div_number: 4,
             points_per_div: 100,
+            // simulation_speed: 1.0,
+            simulation_speed: 20.0,
         }
     }
 }

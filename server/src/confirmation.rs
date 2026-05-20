@@ -1,7 +1,9 @@
 use uuid::Uuid;
 
 use crate::{
-    app_state::AppState, player_connection::messages::structs::ServerMessage, structs::Game,
+    app_state::AppState,
+    player_connection::messages::structs::ServerMessage,
+    structs::{Game, PlayerStatus},
 };
 
 pub async fn confirmation_loop(state: AppState) {
@@ -52,6 +54,16 @@ async fn check_confirmations(state: &AppState) {
         for (game_id, game) in confirmed_games {
             waiting.remove(&game_id);
             ongoing.insert(game_id, game);
+        }
+    }
+
+    {
+        for game in state.ongoing_games.read().await.values() {
+            for lobby_id in &game.lobbys {
+                state
+                    .update_lobby_status(*lobby_id, PlayerStatus::InGame { game_id: game.id })
+                    .await;
+            }
         }
     }
 

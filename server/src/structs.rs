@@ -6,19 +6,15 @@ use random_word::Lang;
 use serde::Serialize;
 use uuid::Uuid;
 
-pub fn rank_from_u8(value: u8) -> String {
-    match value {
-        0 => "Iron".to_string(),
-        1 => "Bronze".to_string(),
-        2 => "Silver".to_string(),
-        3 => "Gold".to_string(),
-        4 => "Platinum".to_string(),
-        5 => "Emerald".to_string(),
-        6 => "Diamond".to_string(),
-        7 => "Master".to_string(),
-        8 => "Grandmaster".to_string(),
-        9 => "Challenger".to_string(),
-        _ => "Unknown".to_string(),
+pub fn mmr_to_rank(mmr: f64) -> &'static str {
+    match mmr as u32 {
+        0..=799 => "Iron",
+        800..=999 => "Bronze",
+        1000..=1199 => "Silver",
+        1200..=1399 => "Gold",
+        1400..=1599 => "Platinum",
+        1600..=1799 => "Diamond",
+        _ => "Master",
     }
 }
 
@@ -27,11 +23,11 @@ pub struct Player {
     pub id: Uuid,
     pub name: String,
     pub mmr: f64,
-    pub rank: u8,
-    pub div: u8,
-    pub points: u32,
+    pub true_skill: f64,
     pub status: PlayerStatus,
     pub lobby: Option<Uuid>,
+    pub wins: Vec<Uuid>,
+    pub losses: Vec<Uuid>,
 
     // simulation-only fields
     pub skills: Vec<String>,
@@ -43,11 +39,12 @@ impl Player {
             id,
             name: Generator::with_naming(Name::Plain).next().unwrap(),
             mmr: 1000.0,
-            rank: 0,
-            div: 4,
-            points: 0,
+            true_skill: 1000.0,
             status: PlayerStatus::Idle,
             lobby: None,
+            wins: Vec::new(),
+            losses: Vec::new(),
+
             skills: create_skill_set(),
         }
     }
@@ -151,8 +148,8 @@ pub enum GameStatus {
 #[derive(Debug, Clone)]
 pub struct GameResult {
     pub id: Uuid,
-    pub team1: Vec<(Uuid, f32)>,
-    pub team2: Vec<(Uuid, f32)>,
+    pub team1: Vec<Uuid>,
+    pub team2: Vec<Uuid>,
     pub winner: u8,
     pub start_time: std::time::Instant,
     pub duration: std::time::Duration,

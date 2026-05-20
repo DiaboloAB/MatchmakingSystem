@@ -1936,9 +1936,16 @@ dependencies = [
 name = "sim"
 version = "0.1.0"
 dependencies = [
+ "clap 4.6.1",
+ "env_logger",
+ "futures",
+ "log",
  "rand 0.10.1",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-tungstenite",
+ "uuid",
 ]
 
 [[package]]

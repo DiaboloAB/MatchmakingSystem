@@ -89,7 +89,7 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
         _ = &mut send_task => recv_task.abort(),
         _ = &mut recv_task => send_task.abort(),
     }
-
+    db_save_player(&state.db, &player).await;
     cleanup(player_id, &state).await;
 }
 
@@ -107,7 +107,6 @@ async fn handle_message(player_id: Uuid, text: &str, state: &AppState) {
         Ok(m) => m,
         Err(_) => {
             log::warn!("Failed to parse message from {}: {}", player_id, text);
-            help(player_id, state).await;
             return;
         }
     };

@@ -37,6 +37,16 @@ pub enum ServerMessage {
     GameCancelled {
         game_id: Uuid,
     },
+    GameResult {
+        game_id: Uuid,
+        won: bool,
+        mmr_change: f64,
+        new_mmr: f64,
+        new_rank: String,
+    },
+    PlayerUpdated {
+        player: Player,
+    },
     Error {
         message: String,
     },
