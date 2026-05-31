@@ -8,19 +8,21 @@ export interface DashboardSnapshot {
     game_number: number
 }
 
-//{"type":"PlayerList","players":[{"id":"7f578f49-5678-4ce1-925b-23369748d551","name":"amuck-glove","mmr":1000.0,"rank":0,"div":4,"points":0,"status":"Idle","lobby":null,"skills":["nonworkers","ashcans","hatchet","hillier"]}]}
-//{ "type": "PlayerList", "players": [{ "id": "ee053c67-3a92-49af-a908-3acf2dd4d46d", "name": "trite-cub", "mmr": 1000.0, "rank": 0, "div": 4, "points": 0, "status": { "NeedConfirmation": { "game_id": "985225bc-80c2-4af2-ab19-86743afeff2d" } }, "lobby": "63ac3a98-a9d8-4d07-8f58-bcc195931b77", "skills": ["documented", "soupcon", "outgives", "mantelpieces"] }] }
+//{ "type": "PlayerList", "players": [{"id":"dd693c40-f2b7-48b6-b1d3-cc232cb5a017","name":"ultra-brothers","mmr":1000.0,"true_skill":1000.0,"status":{"NeedConfirmation":{"game_id":"e9e3b91a-fc12-4174-a5b7-ad9dbf3ddd14"}},"lobby":"bcdadfbf-217c-4f1f-9152-d5097bba360a","wins":[],"losses":[],"skills":["lewd","steepness","boletes","lateness"]}]} }
 export interface PlayerInfo {
     id: string
     name: string
     mmr: number
-    rank: number
-    div: number
-    points: number
+    true_skill: number
+    wins: string[]
+    losses: string[]
     // status: "Idle" | "InQueue" | "NeedConfirmation" | "InGame"
     status: "Idle" | "InQueue" | { NeedConfirmation: { game_id: string } } | { InGame: { game_id: string } }
     lobby: string | null
-    skills: string[]
+
+    debug_rank: string
+    debug_player_level: number
+    debug_player_form: number
 }
 
 // {"type":"LobbyList","lobbys":[{"id":"91bcddaf-0245-43de-8ef4-c9e8f20f2b92","players":["b3c4d938-9b8d-46b3-9568-8b1f4b3596f8"],"owner":"b3c4d938-9b8d-46b3-9568-8b1f4b3596f8","status":{"InQueue":{}}}],"queueing_lobby":[{"lobby_id":"91bcddaf-0245-43de-8ef4-c9e8f20f2b92","avg_mmr":1000.0,"player_count":1,"queue_seconds":3}]}
@@ -49,6 +51,15 @@ export interface GameInfo {
     elapsed_seconds: number
 }
 
+//{"type":"SettingsUpdate","settings":{"lobby_capacity":1,"team_size":1,"simulation_speed":20.0,"confirmation_time":-1.0}}
+
+export interface AppSettings {
+    lobby_capacity: number
+    team_size: number
+    simulation_speed: number
+    confirmation_time: number
+}
+
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
 
@@ -65,6 +76,7 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
     const [waitingGames, setWaitingGames] = useState<GameInfo[]>([])
     const [gameList, setGameList] = useState<GameInfo[]>([])
     const [status, setStatus] = useState<ConnectionStatus>("disconnected")
+    const [settings, setSettings] = useState<AppSettings | null>(null)
     const wsRef = useRef<WebSocket | null>(null)
     const shouldReconnect = useRef(true)
 
@@ -117,6 +129,9 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
                     setWaitingGames(message.waiting_games)
                     setGameList(message.ongoing_games)
                 }
+                if (message.type === "SettingsUpdate") {
+                    setSettings(message.settings)
+                }
             } catch {
                 console.error("Failed to parse snapshot", event.data)
             }
@@ -128,6 +143,7 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
         wsRef.current?.close()
         setStatus("disconnected")
         setData(null)
+        setSettings(null)
     }, [])
 
     useEffect(() => {
@@ -138,6 +154,18 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
         }
     }, [connect])
 
-    return { data, playerList, lobbyList, queueList, waitingGames, gameList, status, connect, disconnect }
+    const updateSettings = useCallback((newSettings: AppSettings) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                type: "UpdateSettings",
+                settings: newSettings
+            }))
+        } else {
+            console.error("WebSocket is not connected")
+        }
+    }, [])
+
+    return { data, playerList, lobbyList, queueList, waitingGames, gameList, status, settings, connect, disconnect, updateSettings }
 }
+
 

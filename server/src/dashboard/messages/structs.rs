@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::structs::{Game, Lobby, Player, QueueEntry};
+use crate::structs::{Game, Lobby, Player, PlayerStatus, QueueEntry};
 
 // ─── Client → Server ──────────────────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ pub enum DashboardClientMessage {
     GetPlayers,
     GetLobbys,
     GetGames,
+    UpdateSettings { settings: AppSettings },
 }
 
 // ─── Server → Client ──────────────────────────────────────────────────────────
@@ -31,6 +32,9 @@ pub enum DashboardServerMessage {
     GameList {
         waiting_games: Vec<GameSnapshot>,
         ongoing_games: Vec<GameSnapshot>,
+    },
+    SettingsUpdate {
+        settings: AppSettings,
     },
 }
 
@@ -94,4 +98,12 @@ impl From<Game> for GameSnapshot {
             elapsed_seconds: game.start_time.elapsed().as_secs(),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AppSettings {
+    pub lobby_capacity: usize,
+    pub team_size: usize,
+    pub simulation_speed: f32,
+    pub confirmation_time: f32,
 }

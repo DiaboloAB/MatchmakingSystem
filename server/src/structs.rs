@@ -24,13 +24,14 @@ pub struct Player {
     pub name: String,
     pub mmr: f64,
     pub true_skill: f64,
+    pub debug_rank: String,
     pub status: PlayerStatus,
     pub lobby: Option<Uuid>,
     pub wins: Vec<Uuid>,
     pub losses: Vec<Uuid>,
 
-    // simulation-only fields
-    pub skills: Vec<String>,
+    pub debug_player_level: f32,
+    pub debug_player_form: f32,
 }
 
 impl Player {
@@ -40,24 +41,16 @@ impl Player {
             name: Generator::with_naming(Name::Plain).next().unwrap(),
             mmr: 1000.0,
             true_skill: 1000.0,
+            debug_rank: mmr_to_rank(1000.0).to_string(),
             status: PlayerStatus::Idle,
             lobby: None,
             wins: Vec::new(),
             losses: Vec::new(),
 
-            skills: create_skill_set(),
+            debug_player_level: rng().random_range(0.0..=10.0),
+            debug_player_form: rng().random_range(0.8..=1.2),
         }
     }
-}
-
-// For simulation purposes, we assign each player a random set of skills from a predefined pool
-pub fn create_skill_set() -> Vec<String> {
-    let nb_skills = rng().random_range(3..6);
-    let mut skills = Vec::new();
-    for _ in 0..nb_skills {
-        skills.push(random_word::get(random_word::Lang::En).to_string());
-    }
-    skills
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

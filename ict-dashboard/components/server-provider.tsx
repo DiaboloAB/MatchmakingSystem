@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { useDashboard, ConnectionStatus } from "@/hooks/useDashboard";
 
-import type { DashboardSnapshot, GameInfo, LobbyInfo, PlayerInfo, QueueInfo } from "@/hooks/useDashboard";
+import type { AppSettings, DashboardSnapshot, GameInfo, LobbyInfo, PlayerInfo, QueueInfo } from "@/hooks/useDashboard";
 
 interface ServerContextType {
     port: number;
@@ -15,8 +15,10 @@ interface ServerContextType {
     waitingGames: GameInfo[];
     gameList: GameInfo[];
     status: ConnectionStatus;
+    settings: AppSettings | null;
     connect: () => void;
     disconnect: () => void;
+    updateSettings: (settings: AppSettings) => void;
 }
 
 const ServerContext = createContext<ServerContextType | undefined>(undefined);
@@ -28,10 +30,10 @@ export default function ServerProvider({
 }>) {
     const [port, setPort] = useState(12345)
 
-    const { data, playerList, lobbyList, queueList, waitingGames, gameList, status, connect, disconnect } = useDashboard({ port })
+    const { data, playerList, lobbyList, queueList, waitingGames, gameList, status, settings, connect, disconnect, updateSettings } = useDashboard({ port })
 
     return (
-        <ServerContext.Provider value={{ port, setPort, data, playerList, lobbyList, queueList, waitingGames, gameList, status, connect, disconnect }}>
+        <ServerContext.Provider value={{ port, setPort, data, playerList, lobbyList, queueList, waitingGames, gameList, status, settings, connect, disconnect, updateSettings }}>
             {children}
         </ServerContext.Provider>
     )

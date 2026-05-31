@@ -55,23 +55,24 @@ async fn resolve_game(state: &AppState, game: Game) {
 
     {
         let players = state.players.read().await;
-        let mut rng = rand::rng();
 
         for player_id in &game.team1 {
             if let Some(player) = players.get(player_id) {
-                if let Some(skill) = player.skills.choose(&mut rng) {
-                    t1_score += skill.len() as f32 + rng.random_range(0.0..10.0);
-                }
+                t1_score += player.debug_player_level + player.debug_player_form;
             }
         }
 
         for player_id in &game.team2 {
             if let Some(player) = players.get(player_id) {
-                if let Some(skill) = player.skills.choose(&mut rng) {
-                    t2_score += skill.len() as f32 + rng.random_range(0.0..10.0);
-                }
+                t2_score += player.debug_player_level + player.debug_player_form;
             }
         }
+    }
+
+    {
+        let mut rng = rand::rng();
+        t1_score += rng.random_range(0.0..20.0);
+        t2_score += rng.random_range(0.0..20.0);
     }
 
     let winning_team = if t1_score > t2_score {
@@ -113,7 +114,6 @@ async fn update_players(state: &AppState, game_result: &GameResult) {
         (&game_result.team2, &game_result.team1)
     };
 
-    // compute average true_skill of each team for Elo calculation
     let (avg_winner_skill, avg_loser_skill) = {
         let players = state.players.read().await;
         let avg = |team: &Vec<Uuid>| {
@@ -160,6 +160,7 @@ async fn update_players(state: &AppState, game_result: &GameResult) {
 
                 p.mmr = (p.mmr + mmr_delta).max(0.0);
                 p.true_skill = (p.true_skill + skill_delta).max(0.0);
+                p.debug_rank = mmr_to_rank(p.mmr).to_string();
                 p.status = PlayerStatus::Idle;
                 if won {
                     p.wins.push(game_result.id)

@@ -1,13 +1,14 @@
+use rand::{Rng, RngExt, rng};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::structs::{GameResult, Player, PlayerStatus};
+use crate::structs::{GameResult, Player, PlayerStatus, mmr_to_rank};
 
 pub async fn db_load_player(db: &SqlitePool, id: Uuid) -> Option<Player> {
     let id_str = id.to_string();
 
     let row = sqlx::query(
-        "SELECT id, name, mmr, true_skill, wins, losses, skills FROM players WHERE id = ?",
+        "SELECT id, name, mmr, true_skill, wins, losses, debug_rank, debug_player_level, debug_player_form FROM players WHERE id = ?",
     )
     .bind(id_str)
     .fetch_optional(db)
@@ -20,6 +21,7 @@ pub async fn db_load_player(db: &SqlitePool, id: Uuid) -> Option<Player> {
         id,
         name: row.get::<String, _>("name"),
         mmr: row.get::<f64, _>("mmr"),
+        debug_rank: mmr_to_rank(row.get::<f64, _>("mmr")).to_string(),
         true_skill: row.get::<f64, _>("true_skill"),
         status: PlayerStatus::Idle,
         lobby: None,
@@ -27,8 +29,8 @@ pub async fn db_load_player(db: &SqlitePool, id: Uuid) -> Option<Player> {
         losses: serde_json::from_str(&row.get::<String, _>("losses"))
             .unwrap_or_else(|_| Vec::new()),
 
-        skills: serde_json::from_str(&row.get::<String, _>("skills"))
-            .unwrap_or_else(|_| Vec::new()),
+        debug_player_level: rng().random_range(0.0..=10.0),
+        debug_player_form: rng().random_range(0.8..=1.2),
     })
 }
 
@@ -36,8 +38,8 @@ pub async fn db_save_player(db: &SqlitePool, player: &Player) {
     let id_str = player.id.to_string();
 
     let _ = sqlx::query(
-        "INSERT INTO players (id, name, mmr, true_skill, wins, losses, skills) VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, mmr = excluded.mmr, true_skill = excluded.true_skill, wins = excluded.wins, losses = excluded.losses, skills = excluded.skills",
+        "INSERT INTO players (id, name, mmr, true_skill, wins, losses, debug_rank, debug_player_level, debug_player_form) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, mmr = excluded.mmr, true_skill = excluded.true_skill, wins = excluded.wins, losses = excluded.losses, debug_rank = excluded.debug_rank, debug_player_level = excluded.debug_player_level, debug_player_form = excluded.debug_player_form",
     )
     .bind(id_str)
     .bind(player.name.clone())
@@ -45,7 +47,9 @@ pub async fn db_save_player(db: &SqlitePool, player: &Player) {
     
     .bind(serde_json::to_string(&player.wins).unwrap_or_else(|_| String::new()))
     .bind(serde_json::to_string(&player.losses).unwrap_or_else(|_| String::new()))
-    .bind(serde_json::to_string(&player.skills).unwrap_or_else(|_| String::new()))
+    .bind(player.debug_rank.clone())
+    .bind(player.debug_player_level)
+    .bind(player.debug_player_form)
     .execute(db)
     .await;
 }

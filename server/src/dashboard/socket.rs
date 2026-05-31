@@ -13,7 +13,8 @@ use tokio::sync::mpsc;
 use crate::{
     app_state::AppState,
     dashboard::messages::structs::{
-        DashboardClientMessage, DashboardServerMessage, DashboardSnapshot, GameSnapshot,
+        AppSettings, DashboardClientMessage, DashboardServerMessage, DashboardSnapshot,
+        GameSnapshot,
     },
 };
 
@@ -43,6 +44,7 @@ async fn handle_dashboard_connection(mut socket: WebSocket, state: AppState) {
         handle_get_players(&state).await;
         handle_get_lobbys(&state).await;
         handle_get_games(&state).await;
+        update_settings(&state).await;
         while let Some(Ok(msg)) = ws_rx.next().await {
             if let Message::Text(text) = msg {
                 log::info!("Received from dashboard: {}", text);
@@ -100,6 +102,9 @@ async fn handle_message(text: &str, state: &AppState) {
         DashboardClientMessage::GetGames => handle_get_games(state).await,
         DashboardClientMessage::GetLobbys => handle_get_lobbys(state).await,
         DashboardClientMessage::GetPlayers => handle_get_players(state).await,
+        DashboardClientMessage::UpdateSettings { settings } => {
+            handle_update_settings(state, settings).await
+        }
         _ => log::warn!("Unknown message type from dashboard: {:?}", msg),
     }
 }
@@ -145,4 +150,31 @@ async fn handle_get_games(state: &AppState) {
                 .map(|g| GameSnapshot::from(g.clone()))
                 .collect(),
         });
+}
+
+async fn update_settings(state: &AppState) {
+    let app_settings = AppSettings {
+        lobby_capacity: state.settings.read().await.lobby_capacity,
+        team_size: state.settings.read().await.team_size,
+        simulation_speed: state.settings.read().await.simulation_speed,
+        confirmation_time: state.settings.read().await.confirmation_time,
+    };
+    let _ = state
+        .dashboard_tx
+        .write()
+        .await
+        .send(DashboardServerMessage::SettingsUpdate {
+            settings: app_settings,
+        });
+}
+
+async fn handle_update_settings(state: &AppState, new_settings: AppSettings) {
+    {
+        let mut settings = state.settings.write().await;
+        settings.lobby_capacity = new_settings.lobby_capacity;
+        settings.team_size = new_settings.team_size;
+        settings.simulation_speed = new_settings.simulation_speed;
+        settings.confirmation_time = new_settings.confirmation_time;
+    }
+    update_settings(state).await;
 }

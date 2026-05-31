@@ -51,7 +51,6 @@ const columns: ColumnDef<PlayerInfo>[] = [
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
-
             const status = row.getValue("status") as PlayerInfo["status"]
 
             const getStatusColor = (s: PlayerInfo["status"]) => {
@@ -80,44 +79,41 @@ const columns: ColumnDef<PlayerInfo>[] = [
         },
     },
     {
+        accessorKey: "debug_rank",
+        header: "Rank (debug)",
+        cell: ({ row }) => <Badge variant="secondary">{row.getValue("debug_rank") as string}</Badge>,
+    },
+    {
         accessorKey: "mmr",
         header: "MMR",
-        cell: ({ row }) => <div className="font-mono">{row.getValue("mmr")}</div>,
+        cell: ({ row }) => <div className="font-mono">{Math.round(row.getValue("mmr") as number)}</div>,
     },
     {
-        accessorKey: "rank",
-        header: "Rank",
-        cell: ({ row }) => <div>{row.getValue("rank")}</div>,
+        accessorKey: "true_skill",
+        header: "True Skill",
+        cell: ({ row }) => <div className="font-mono text-muted-foreground">{Math.round(row.getValue("true_skill") as number)}</div>,
     },
     {
-        accessorKey: "div",
-        header: "Division",
-        cell: ({ row }) => <div>{row.getValue("div")}</div>,
-    },
-    {
-        accessorKey: "points",
-        header: "Points",
-        cell: ({ row }) => <div className="font-mono">{row.getValue("points")}</div>,
-    },
-    {
-        accessorKey: "skills",
-        header: "Skills",
+        id: "record",
+        header: "Record",
         cell: ({ row }) => {
-            const skills = row.getValue("skills") as string[]
-            if (!skills || skills.length === 0) return <span className="text-muted-foreground text-xs">None</span>
-
-            return (
-                <div className="flex flex-wrap gap-1 w-48">
-                    {skills.map((skill) => (
-                        <Badge key={skill} variant="secondary" className="px-1 text-[10px] uppercase font-mono">
-                            {skill}
-                        </Badge>
-                    ))}
-                </div>
-            )
+            const wins = row.original.wins?.length || 0;
+            const losses = row.original.losses?.length || 0;
+            return <div className="font-mono text-sm">{wins}W - {losses}L</div>;
         },
     },
+    {
+        accessorKey: "debug_player_level",
+        header: "Level (debug)",
+        cell: ({ row }) => <div>{row.getValue("debug_player_level")}</div>,
+    },
+    {
+        accessorKey: "debug_player_form",
+        header: "Form (debug)",
+        cell: ({ row }) => <div>{(row.getValue("debug_player_form") as number).toFixed(2)}</div>,
+    },
 ]
+
 
 export function PlayerDataTable({ data }: { data: PlayerInfo[] }) {
     const [sorting, setSorting] = React.useState<SortingState>([])

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use sqlx::SqlitePool;
 use std::sync::Arc;
-use tokio::sync::{RwLock, broadcast, mpsc};
+use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 
 use crate::{
-    dashboard::messages::structs::{DashboardServerMessage, DashboardSnapshot},
+    dashboard::messages::structs::DashboardServerMessage,
     player_connection::messages::structs::ServerMessage,
-    structs::{Game, GameStatus, Lobby, Player, PlayerStatus, QueueEntry},
+    structs::{Game, Lobby, Player, PlayerStatus, QueueEntry},
 };
 
 // type PlayerTx = mpsc::UnboundedSender<ServerMessage>;
@@ -22,6 +22,8 @@ pub struct Settings {
 
     // settings for simulation
     pub simulation_speed: f32,
+    // -1 means infinite
+    pub confirmation_time: f32,
 }
 
 impl Default for Settings {
@@ -46,6 +48,7 @@ impl Default for Settings {
             points_per_div: 100,
             // simulation_speed: 1.0,
             simulation_speed: 20.0,
+            confirmation_time: -1.0,
         }
     }
 }
