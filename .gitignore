@@ -21,3 +21,7 @@ target
 #.idea/
 
 .env
+
+app_database.db
+
+*.db
