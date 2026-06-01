@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { TrophyIcon, SwordsIcon } from "lucide-react"
 
 export function RecentGameCard() {
-    const { gameResults, playerList } = useServer()
+    const { data, gameResults, playerList } = useServer()
 
     const recentGames = [...(gameResults || [])].reverse().slice(0, 15)
 
@@ -20,7 +20,7 @@ export function RecentGameCard() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <SwordsIcon className="size-5" />
-                    Recent Matches
+                    Recent Matches ({gameResults?.length ?? "0"}) (all time games : {data?.total_finished_game ?? "0"})
                 </CardTitle>
                 <CardDescription>Live feed of completed games</CardDescription>
             </CardHeader>

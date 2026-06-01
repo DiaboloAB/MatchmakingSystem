@@ -70,9 +70,11 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
         let players = state.players.read().await;
         let lobbys = state.lobbys.read().await;
         let games = state.ongoing_games.read().await;
+        let total_game = state.total_game.read().await;
 
         let snapshot = DashboardSnapshot {
             total_player: *total_player,
+            total_finished_game: *total_game,
             connected_players: players.len(),
             lobby_number: lobbys.len(),
             game_number: games.len(),
@@ -158,6 +160,8 @@ async fn update_settings(state: &AppState) {
         team_size: state.settings.read().await.team_size,
         simulation_speed: state.settings.read().await.simulation_speed,
         confirmation_time: state.settings.read().await.confirmation_time,
+        matchmaking_delta: state.settings.read().await.matchmaking_delta,
+        matchmaking_time_factor: state.settings.read().await.matchmaking_time_factor,
     };
     let _ = state
         .dashboard_tx

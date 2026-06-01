@@ -49,6 +49,7 @@ pub enum DashboardServerMessage {
 #[derive(Debug, Serialize, Clone, Default)]
 pub struct DashboardSnapshot {
     pub total_player: usize,
+    pub total_finished_game: usize,
     pub connected_players: usize,
 
     // pub idle_players: usize,
@@ -112,4 +113,6 @@ pub struct AppSettings {
     pub team_size: usize,
     pub simulation_speed: f32,
     pub confirmation_time: f32,
+    pub matchmaking_delta: f32,
+    pub matchmaking_time_factor: f32,
 }

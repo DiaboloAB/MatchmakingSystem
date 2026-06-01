@@ -84,6 +84,11 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
             let p = Player::new(player_id);
             log::info!("Created new player: {}", p.name);
             db_save_player(&state.db, &p).await;
+
+            {
+                let mut total_player = state.total_player.write().await;
+                *total_player += 1;
+            }
             p
         }
     };

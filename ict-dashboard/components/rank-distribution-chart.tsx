@@ -13,6 +13,20 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
+const RANK_ORDER = [
+    "Unranked",
+    "Iron",
+    "Bronze",
+    "Silver",
+    "Gold",
+    "Platinum",
+    "Emerald",
+    "Diamond",
+    "Master",
+    "Grandmaster",
+    "Challenger"
+]
+
 export function RankDistributionChart() {
     const { playerList } = useServer()
 
@@ -20,15 +34,33 @@ export function RankDistributionChart() {
         if (!playerList) return []
 
         const counts: Record<string, number> = {}
+        RANK_ORDER.forEach(rank => {
+            counts[rank] = 0
+        })
 
         playerList.forEach((player) => {
             const key = player.debug_rank || "Unranked"
-            counts[key] = (counts[key] || 0) + 1
+
+            if (counts[key] === undefined) {
+                counts[key] = 0
+            }
+
+            counts[key] += 1
         })
 
-        return Object.entries(counts)
-            .map(([name, count]) => ({ name, players: count }))
-            .sort((a, b) => a.name.localeCompare(b.name))
+        const orderedData = RANK_ORDER.map(name => ({
+            name,
+            players: counts[name]
+        }))
+
+        const knownRanks = new Set(RANK_ORDER)
+        Object.keys(counts).forEach(key => {
+            if (!knownRanks.has(key)) {
+                orderedData.push({ name: key, players: counts[key] })
+            }
+        })
+
+        return orderedData
     }, [playerList])
 
     return (

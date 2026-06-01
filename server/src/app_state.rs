@@ -24,6 +24,8 @@ pub struct Settings {
     pub simulation_speed: f32,
     // -1 means infinite
     pub confirmation_time: f32,
+    pub matchmaking_delta: f32,
+    pub matchmaking_time_factor: f32,
 }
 
 impl Default for Settings {
@@ -49,6 +51,9 @@ impl Default for Settings {
             // simulation_speed: 1.0,
             simulation_speed: 20.0,
             confirmation_time: -1.0,
+
+            matchmaking_delta: 10.0,
+            matchmaking_time_factor: 10.0,
         }
     }
 }

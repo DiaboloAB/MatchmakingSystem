@@ -109,93 +109,104 @@ async fn resolve_game(state: &AppState, game: Game) {
     db_save_game_result(&state.db, &game_result).await;
     update_players(state, &game_result).await;
     send_new_game_to_dashboard(state, &game_result).await;
+    {
+        let mut total_game = state.total_game.write().await;
+        *total_game += 1;
+    }
 }
 
+const K_VISIBLE: f64 = 16.0 * 2.0;
+const K_HIDDEN: f64 = 64.0 * 2.0;
+
 async fn update_players(state: &AppState, game_result: &GameResult) {
-    let (winners, losers) = if game_result.winner == 1 {
-        (&game_result.team1, &game_result.team2)
-    } else {
-        (&game_result.team2, &game_result.team1)
+    let (winners, losers) = match game_result.winner {
+        1 => (&game_result.team1, &game_result.team2),
+        _ => (&game_result.team2, &game_result.team1),
     };
 
-    let (avg_winner_skill, avg_loser_skill) = {
-        let players = state.players.read().await;
-        let avg = |team: &Vec<Uuid>| {
-            let skills: Vec<f64> = team
-                .iter()
-                .filter_map(|id| players.get(id))
-                .map(|p| p.true_skill)
-                .collect();
-            if skills.is_empty() {
-                1000.0
-            } else {
-                skills.iter().sum::<f64>() / skills.len() as f64
-            }
-        };
-        (avg(winners), avg(losers))
+    let mmr_delta = compute_mmr_delta(state, winners, losers).await;
+
+    apply_results(state, game_result, winners, losers, mmr_delta).await;
+}
+
+async fn compute_mmr_delta(state: &AppState, winners: &[Uuid], losers: &[Uuid]) -> (f64, f64) {
+    let players = state.players.read().await;
+
+    let avg_skill = |team: &[Uuid]| -> f64 {
+        let skills: Vec<f64> = team
+            .iter()
+            .filter_map(|id| players.get(id))
+            .map(|p| p.true_skill)
+            .collect();
+        if skills.is_empty() {
+            1000.0
+        } else {
+            skills.iter().sum::<f64>() / skills.len() as f64
+        }
     };
 
-    let expected_winner = 1.0 / (1.0 + 10f64.powf((avg_loser_skill - avg_winner_skill) / 400.0));
-    let expected_loser = 1.0 / (1.0 + 10f64.powf((avg_winner_skill - avg_loser_skill) / 400.0));
+    let winner_skill = avg_skill(winners);
+    let loser_skill = avg_skill(losers);
 
-    const K_VISIBLE: f64 = 16.0;
-    const K_HIDDEN: f64 = 64.0;
+    let expected = 1.0 / (1.0 + 10f64.powf((loser_skill - winner_skill) / 400.0));
 
-    let visible_delta = K_VISIBLE * (1.0 - expected_winner);
-    let hidden_delta = K_HIDDEN * (1.0 - expected_winner);
+    let visible_delta = K_VISIBLE * (1.0 - expected);
+    let hidden_delta = K_HIDDEN * (1.0 - expected);
 
-    let mut notifications: Vec<(Uuid, ServerMessage)> = Vec::new();
+    (visible_delta, hidden_delta)
+}
+
+async fn apply_results(
+    state: &AppState,
+    game_result: &GameResult,
+    winners: &[Uuid],
+    losers: &[Uuid],
+    (visible_delta, hidden_delta): (f64, f64),
+) {
+    let mut notifications = Vec::new();
 
     {
         let mut players = state.players.write().await;
 
-        let all_players = winners
+        for (player_id, won) in winners
             .iter()
             .map(|id| (id, true))
-            .chain(losers.iter().map(|id| (id, false)));
+            .chain(losers.iter().map(|id| (id, false)))
+        {
+            let Some(p) = players.get_mut(player_id) else {
+                continue;
+            };
 
-        for (player_id, won) in all_players {
-            if let Some(p) = players.get_mut(player_id) {
-                let (mmr_delta, skill_delta) = if won {
-                    (visible_delta, hidden_delta)
-                } else {
-                    (-visible_delta, -hidden_delta)
-                };
+            let sign = if won { 1.0 } else { -1.0 };
+            p.mmr = (p.mmr + sign * visible_delta).max(0.0);
+            p.true_skill = (p.true_skill + sign * hidden_delta).max(0.0);
+            p.debug_rank = mmr_to_rank(p.mmr).to_string();
+            p.status = PlayerStatus::Idle;
 
-                p.mmr = (p.mmr + mmr_delta).max(0.0);
-                p.true_skill = (p.true_skill + skill_delta).max(0.0);
-                p.debug_rank = mmr_to_rank(p.mmr).to_string();
-                p.status = PlayerStatus::Idle;
-                if won {
-                    p.wins.push(game_result.id)
-                } else {
-                    p.losses.push(game_result.id)
-                }
-
-                notifications.push((
-                    *player_id,
-                    ServerMessage::GameResult {
-                        game_id: game_result.id,
-                        won,
-                        mmr_change: mmr_delta,
-                        new_mmr: p.mmr,
-                        new_rank: mmr_to_rank(p.mmr).to_string(),
-                    },
-                ));
+            if won {
+                p.wins.push(game_result.id)
+            } else {
+                p.losses.push(game_result.id)
             }
+
+            notifications.push((
+                *player_id,
+                ServerMessage::GameResult {
+                    game_id: game_result.id,
+                    won,
+                    mmr_change: sign * visible_delta,
+                    new_mmr: p.mmr,
+                    new_rank: mmr_to_rank(p.mmr).to_string(),
+                },
+            ));
         }
     }
 
-    {
-        let players = state.players.read().await;
-        for (player_id, _) in &notifications {
-            if let Some(p) = players.get(player_id) {
-                db_save_player(&state.db, p).await;
-            }
-        }
-    }
-
+    let players = state.players.read().await;
     for (player_id, msg) in notifications {
+        if let Some(p) = players.get(&player_id) {
+            db_save_player(&state.db, p).await;
+        }
         state.send_to(player_id, msg).await;
     }
 }

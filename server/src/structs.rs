@@ -1,20 +1,22 @@
 use std::fmt::Display;
 
 use names::{Generator, Name};
-use rand::{Rng, RngExt, rng};
-use random_word::Lang;
+use rand::{RngExt, rng};
 use serde::Serialize;
 use uuid::Uuid;
 
 pub fn mmr_to_rank(mmr: f64) -> &'static str {
     match mmr as u32 {
-        0..=799 => "Iron",
-        800..=999 => "Bronze",
-        1000..=1199 => "Silver",
-        1200..=1399 => "Gold",
-        1400..=1599 => "Platinum",
-        1600..=1799 => "Diamond",
-        _ => "Master",
+        0..=999 => "Iron",
+        1000..=1049 => "Bronze",
+        1050..=1099 => "Silver",
+        1100..=1149 => "Gold",
+        1150..=1199 => "Platinum",
+        1200..=1249 => "Emerald",
+        1250..=1299 => "Diamond",
+        1300..=1349 => "Master",
+        1350..=1449 => "Grandmaster",
+        1450..=u32::MAX => "Challenger",
     }
 }
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 //{"type":"Snapshot","snapshot":{"total_player":49,"connected_players":0,"lobby_number":0,"game_number":0}}
 export interface DashboardSnapshot {
     total_player: number
+    total_finished_game: number
     connected_players: number
     lobby_number: number
     game_number: number
@@ -58,6 +59,8 @@ export interface AppSettings {
     team_size: number
     simulation_speed: number
     confirmation_time: number
+    matchmaking_delta: number
+    matchmaking_time_factor: number
 }
 
 

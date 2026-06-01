@@ -20,7 +20,7 @@ struct Args {
     #[arg(long, default_value = "app_database.db")]
     db: String,
 
-    #[arg(long, default_value_t = 0.5)]
+    #[arg(long, default_value_t = 0.8)]
     existing_ratio: f32,
 }
 

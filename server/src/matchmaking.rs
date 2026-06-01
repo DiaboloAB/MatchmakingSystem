@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::{
     app_state::{AppState, Settings},
     player_connection::messages::structs::ServerMessage,
-    structs::{Game, PlayerStatus},
+    structs::{Game, PlayerStatus, QueueEntry},
 };
 
 pub async fn matchmaking_loop(state: AppState) {
@@ -14,8 +14,20 @@ pub async fn matchmaking_loop(state: AppState) {
     }
 }
 
+fn lobby_queue_match(setting: &Settings, lobby1: &QueueEntry, lobby2: &QueueEntry) -> bool {
+    let time_in_queue1 = lobby1.start_time.elapsed().as_secs_f32();
+    let time_in_queue2 = lobby2.start_time.elapsed().as_secs_f32();
+    let lowest_time = time_in_queue1.min(time_in_queue2);
+
+    let mmr_diff = (lobby1.avg_mmr - lobby2.avg_mmr).abs();
+    let dynamic_threshold =
+        setting.matchmaking_delta + lowest_time * setting.matchmaking_time_factor;
+    mmr_diff < dynamic_threshold as f64
+}
+
 async fn try_form_matches(state: &AppState) {
     let mut queueing_lobbys = state.queueing_lobbys.write().await;
+    let settings = state.settings.read().await;
 
     if queueing_lobbys.len() < 2 {
         return;
@@ -26,7 +38,7 @@ async fn try_form_matches(state: &AppState) {
             let lobby1 = &queueing_lobbys[i];
             let lobby2 = &queueing_lobbys[j];
 
-            if lobby1.avg_mmr - lobby2.avg_mmr < 100.0 {
+            if lobby_queue_match(&settings, lobby1, lobby2) {
                 log::info!(
                     "Match found between lobby {} and lobby {}",
                     lobby1.lobby_id,

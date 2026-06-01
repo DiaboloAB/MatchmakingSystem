@@ -125,6 +125,32 @@ export default function SettingsPage() {
                     <p className="text-[0.8rem] text-muted-foreground">Seconds allowed for players to accept a match.</p>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="matchmaking_delta">Matchmaking MMR Delta</Label>
+                    <Input
+                      id="matchmaking_delta"
+                      name="matchmaking_delta"
+                      type="number"
+                      step="0.1"
+                      value={formData.matchmaking_delta}
+                      onChange={handleInputChange}
+                    />
+                    <p className="text-[0.8rem] text-muted-foreground">Base MMR difference threshold for matchmaking.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="matchmaking_time_factor">Matchmaking Time Factor</Label>
+                    <Input
+                      id="matchmaking_time_factor"
+                      name="matchmaking_time_factor"
+                      type="number"
+                      step="0.1"
+                      value={formData.matchmaking_time_factor}
+                      onChange={handleInputChange}
+                    />
+                    <p className="text-[0.8rem] text-muted-foreground">Multiplier that increases matchmaking MMR delta over time.</p>
+                  </div>
+
                 </div>
               )}
             </CardContent>
