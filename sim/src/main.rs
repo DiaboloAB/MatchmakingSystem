@@ -16,10 +16,49 @@ struct Args {
 
     #[arg(short, long, default_value_t = 50)]
     count: usize,
+
+    #[arg(long, default_value = "app_database.db")]
+    db: String,
+
+    #[arg(long, default_value_t = 0.5)]
+    existing_ratio: f32,
 }
 
-async fn simulate_bot(host: String, port: u16, bot_id: usize) {
-    let player_id = Uuid::new_v4();
+async fn load_existing_player_ids(db_path: &str, limit: usize) -> Vec<Uuid> {
+    let url = format!("sqlite:{}?mode=ro", db_path); // read-only
+    let db = match sqlx::SqlitePool::connect(&url).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            println!(
+                "[Sim] Could not open DB ({}), all bots will be new players",
+                e
+            );
+            return vec![];
+        }
+    };
+
+    let rows = sqlx::query("SELECT id FROM players ORDER BY RANDOM() LIMIT ?")
+        .bind(limit as i64)
+        .fetch_all(&db)
+        .await
+        .unwrap_or_default();
+
+    use sqlx::Row;
+    let ids: Vec<Uuid> = rows
+        .iter()
+        .filter_map(|row| {
+            let id_str: String = row.get("id");
+            Uuid::parse_str(&id_str).ok()
+        })
+        .collect();
+
+    println!("[Sim] Loaded {} existing players from DB", ids.len());
+    db.close().await;
+    ids
+}
+
+async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid) {
+    let url = format!("ws://{}:{}/ws/{}", host, port, player_id);
 
     loop {
         let url = format!("ws://{}:{}/ws/{}", host, port, player_id);
@@ -39,8 +78,16 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize) {
         println!("[Bot {}] Connected with ID: {}", bot_id, player_id);
         let (mut ws_tx, mut ws_rx) = ws_stream.split();
 
-        while let Some(Ok(Message::Text(text))) = ws_rx.next().await {
-            let msg = match serde_json::from_str::<serde_json::Value>(&text) {
+        loop {
+            let msg = match tokio::time::timeout(Duration::from_secs(60), ws_rx.next()).await {
+                Ok(Some(Ok(Message::Text(text)))) => text,
+                Ok(_) => break,
+                Err(_) => {
+                    println!("[Bot {}] Stuck for 60s, reconnecting", bot_id);
+                    break;
+                }
+            };
+            let msg = match serde_json::from_str::<serde_json::Value>(&msg) {
                 Ok(m) => m,
                 Err(_) => continue,
             };
@@ -88,7 +135,7 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize) {
                         //     break;
                         // }
 
-                        // send with simulated network constraints
+                        // send w/ simulated network constraints
                         if send_with_constraints(
                             &mut ws_tx,
                             Message::Text(req.to_string().into()),
@@ -126,6 +173,20 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize) {
                         .is_err()
                     {
                         break;
+                    }
+                }
+                "StatusUpdate" => {
+                    let status = msg.get("status").and_then(|s| s.as_str()).unwrap_or("");
+                    if status == "Idle" {
+                        sleep(Duration::from_millis(rand::random_range(1000..3000))).await;
+                        let req = serde_json::json!({ "type": "SearchGame" });
+                        if ws_tx
+                            .send(Message::Text(req.to_string().into()))
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
                     }
                 }
                 _ => {}
@@ -170,25 +231,45 @@ where
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    println!("Starting simulation with {} bots...", args.count);
+    let existing_count = (args.count as f32 * args.existing_ratio) as usize;
+    let new_count = args.count - existing_count;
+
+    println!(
+        "Starting {} bots ({} existing players, {} new) on {}:{}",
+        args.count, existing_count, new_count, args.host, args.port
+    );
+
+    let existing_ids = load_existing_player_ids(&args.db, existing_count).await;
+    let actual_existing = existing_ids.len();
+    let actual_new = args.count - actual_existing;
+
+    println!(
+        "[Sim] Spawning {} existing + {} new players",
+        actual_existing, actual_new
+    );
 
     let mut handles = Vec::new();
 
-    for i in 0..args.count {
+    for (i, player_id) in existing_ids.into_iter().enumerate() {
         let host = args.host.clone();
         let port = args.port;
-
         let startup_delay = rand::random_range(10..2000);
         sleep(Duration::from_millis(startup_delay)).await;
-
-        let handle = tokio::spawn(async move {
-            simulate_bot(host, port, i).await;
-        });
-
-        handles.push(handle);
+        handles.push(tokio::spawn(async move {
+            simulate_bot(host, port, i, player_id).await;
+        }));
+    }
+    for i in actual_existing..actual_existing + actual_new {
+        let host = args.host.clone();
+        let port = args.port;
+        let player_id = Uuid::new_v4();
+        let startup_delay = rand::random_range(10..2000);
+        sleep(Duration::from_millis(startup_delay)).await;
+        handles.push(tokio::spawn(async move {
+            simulate_bot(host, port, i, player_id).await;
+        }));
     }
 
     futures::future::join_all(handles).await;
-
     Ok(())
 }

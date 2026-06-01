@@ -39,9 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             id   TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             mmr REAL NOT NULL DEFAULT 1000.0,
+            true_skill REAL NOT NULL DEFAULT 1000.0,
             wins TEXT NOT NULL DEFAULT '[]',
             losses TEXT NOT NULL DEFAULT '[]',
-            skills TEXT NOT NULL DEFAULT '[]'
+            debug_rank TEXT NOT NULL DEFAULT 'Unranked',
+            debug_player_level REAL NOT NULL DEFAULT 0.0,
+            debug_player_form REAL NOT NULL DEFAULT 1.0
         )",
     )
     .execute(&db)

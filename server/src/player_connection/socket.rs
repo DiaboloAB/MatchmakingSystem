@@ -27,6 +27,21 @@ pub async fn ws_handler(
     Path(player_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Response {
+    {
+        log::info!("Checking player {} connecting", player_id);
+        let players = state.players.read().await;
+        if players.contains_key(&player_id) {
+            log::warn!(
+                "Player {} already connected, rejecting new connection",
+                player_id
+            );
+            return Response::builder()
+                .status(400)
+                .body("Player ID already connected".into())
+                .unwrap();
+        }
+    }
+
     log::info!("Player {} connected", player_id);
     ws.on_upgrade(move |socket| handle_connection(socket, player_id, state))
 }
@@ -36,6 +51,22 @@ pub async fn ws_handler_new_player(
     State(state): State<AppState>,
 ) -> Response {
     let player_id = Uuid::new_v4();
+
+    {
+        log::info!("Checking player {} connecting", player_id);
+        let players = state.players.read().await;
+        if players.contains_key(&player_id) {
+            log::warn!(
+                "Player {} already connected, rejecting new connection",
+                player_id
+            );
+            return Response::builder()
+                .status(400)
+                .body("Player ID already connected".into())
+                .unwrap();
+        }
+    }
+
     log::info!("Player {} connected", player_id);
     ws.on_upgrade(move |socket| handle_connection(socket, player_id, state))
 }
@@ -45,9 +76,13 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
     let (tx, mut rx) = mpsc::unbounded_channel::<ServerMessage>();
 
     let player = match db_load_player(&state.db, player_id).await {
-        Some(p) => p,
+        Some(p) => {
+            log::info!("Loaded existing player: {}", p.name);
+            p
+        }
         None => {
             let p = Player::new(player_id);
+            log::info!("Created new player: {}", p.name);
             db_save_player(&state.db, &p).await;
             p
         }
