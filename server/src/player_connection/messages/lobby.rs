@@ -2,7 +2,10 @@ use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
-    player_connection::messages::structs::ServerMessage,
+    player_connection::messages::{
+        game::{cancel_research, cancel_research_id},
+        structs::ServerMessage,
+    },
     structs::{Lobby, Player, PlayerStatus},
 };
 
@@ -139,6 +142,8 @@ pub async fn remove_player_from_lobby(player: &Player, state: &AppState) {
             return;
         }
     };
+
+    cancel_research_id(lobby_id, state).await;
 
     if let Some(l) = lobbys.get_mut(&lobby_id) {
         log::info!("Player {} was in lobby {}, removing", player.name, lobby_id);

@@ -61,6 +61,7 @@ async fn load_existing_player_ids(db_path: &str, limit: usize) -> Vec<Uuid> {
 }
 
 async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid, packet_loss: bool) {
+    println!("Packet loss simulation: {}", packet_loss);
     loop {
         let url = format!("ws://{}:{}/ws/{}", host, port, player_id);
 
@@ -139,11 +140,15 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid, p
                                 break;
                             }
                         } else {
+                            println!(
+                                "[Bot {}] Simulating packet loss/delay for ConfirmGame message",
+                                bot_id
+                            );
                             // send w/ simulated network constraints
                             if send_with_constraints(
                                 &mut ws_tx,
                                 Message::Text(req.to_string().into()),
-                                10,
+                                35,
                                 2000,
                             )
                             .await

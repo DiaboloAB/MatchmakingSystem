@@ -99,6 +99,23 @@ pub async fn cancel_research(player: Player, state: &AppState) {
     state.dequeue_lobby(lobby_id).await;
 }
 
+pub async fn cancel_research_id(lobby_id: Uuid, state: &AppState) {
+    let lobby = {
+        let lobbys = state.lobbys.read().await;
+        match lobbys.get(&lobby_id) {
+            Some(l) => l.clone(),
+            None => return,
+        }
+    };
+    if !matches!(lobby.status, PlayerStatus::InQueue { .. }) {
+        return;
+    }
+    state
+        .update_lobby_status(lobby_id, PlayerStatus::Idle)
+        .await;
+    state.dequeue_lobby(lobby_id).await;
+}
+
 pub async fn confirm_game(player: Player, id: Uuid, state: &AppState) {
     log::info!("Player {} is confirming game {}", player.name, id);
     let _lobby_id = match player.lobby {
