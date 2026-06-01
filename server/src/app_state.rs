@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, net::ToSocketAddrs};
 
 use sqlx::SqlitePool;
 use std::sync::Arc;
@@ -56,6 +56,7 @@ impl Default for Settings {
 #[derive(Clone)]
 pub struct AppState {
     pub total_player: Arc<RwLock<usize>>,
+    pub total_game: Arc<RwLock<usize>>,
     pub players: Arc<RwLock<HashMap<Uuid, Player>>>,
     pub senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<ServerMessage>>>>,
     pub db: SqlitePool,
@@ -66,13 +67,13 @@ pub struct AppState {
 
     pub dashboard_tx: Arc<RwLock<mpsc::UnboundedSender<DashboardServerMessage>>>,
     pub settings: Arc<RwLock<Settings>>,
-    // pub queue: Arc<RwLock<Vec<Uuid>>>,
 }
 
 impl AppState {
-    pub fn new(db: SqlitePool, total_player: usize) -> Self {
+    pub fn new(db: SqlitePool, total_player: usize, total_game: usize) -> Self {
         Self {
             total_player: Arc::new(RwLock::new(total_player)),
+            total_game: Arc::new(RwLock::new(total_game)),
             players: Arc::new(RwLock::new(HashMap::new())),
             senders: Arc::new(RwLock::new(HashMap::new())),
             lobbys: Arc::new(RwLock::new(HashMap::new())),
@@ -135,6 +136,13 @@ impl AppState {
             if let Some(p) = players.get_mut(&player_id) {
                 p.status = status.clone();
             }
+            self.send_to(
+                player_id,
+                ServerMessage::StatusUpdate {
+                    status: status.clone(),
+                },
+            )
+            .await;
         }
     }
 }

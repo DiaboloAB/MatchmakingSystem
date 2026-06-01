@@ -65,7 +65,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .unwrap_or(0) as usize;
 
-    let state = AppState::new(db, total_player);
+    let total_game = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM games")
+        .fetch_one(&db)
+        .await
+        .unwrap_or(0) as usize;
+
+    let state = AppState::new(db, total_player, total_game);
 
     tokio::spawn(matchmaking_loop(state.clone()));
     tokio::spawn(confirmation_loop(state.clone()));
@@ -87,5 +92,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     log::info!("Server shut down cleanly");
+
     Ok(())
 }

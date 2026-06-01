@@ -13,11 +13,9 @@ export default function PlayersPage() {
     <div className="flex flex-col min-h-screen">
       <SiteHeader name="Player Directory" />
 
-      {/* Main Content Container */}
       <main className="flex-1 p-6 lg:p-8">
         <div className="mx-auto max-w-6xl space-y-6">
 
-          {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Player Management</h2>
@@ -27,7 +25,6 @@ export default function PlayersPage() {
             </div>
           </div>
 
-          {/* Table Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
               <div className="space-y-1.5">

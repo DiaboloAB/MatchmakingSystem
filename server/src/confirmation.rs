@@ -2,6 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     app_state::AppState,
+    confirmation,
     player_connection::messages::structs::ServerMessage,
     structs::{Game, PlayerStatus},
 };
@@ -16,7 +17,36 @@ pub async fn confirmation_loop(state: AppState) {
 async fn check_confirmations(state: &AppState) {
     let settings = state.settings.read().await;
     let required = settings.team_size * 2;
+    let confirmation_time = settings.confirmation_time;
     drop(settings);
+
+    if confirmation_time > 0.0 {
+        // check for games that are not confirmed after confirmation_time
+        let now = std::time::Instant::now();
+        let mut to_remove = Vec::new();
+        let confirmation_time = std::time::Duration::from_secs(confirmation_time as u64);
+        {
+            let waiting = state.waiting_games.read().await;
+            for (game_id, game) in waiting.iter() {
+                if now.duration_since(game.start_time) > confirmation_time {
+                    to_remove.push(*game_id);
+                    log::info!("Removing unconfirmed game: {}", game_id);
+                    for lobby_id in &game.lobbys {
+                        state
+                            .update_lobby_status(*lobby_id, PlayerStatus::Idle)
+                            .await;
+                    }
+                }
+            }
+        }
+
+        {
+            let mut waiting = state.waiting_games.write().await;
+            for game_id in to_remove {
+                waiting.remove(&game_id);
+            }
+        }
+    }
 
     let confirmed_games: Vec<(Uuid, Game)> = {
         let games = state.waiting_games.read().await;

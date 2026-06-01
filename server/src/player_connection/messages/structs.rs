@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::structs::Player;
+use crate::structs::{Player, PlayerStatus};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type")]
@@ -52,6 +52,9 @@ pub enum ServerMessage {
     },
     Info {
         message: String,
+    },
+    StatusUpdate {
+        status: PlayerStatus,
     },
 }
 

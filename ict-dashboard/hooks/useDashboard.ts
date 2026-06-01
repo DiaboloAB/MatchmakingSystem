@@ -61,6 +61,18 @@ export interface AppSettings {
 }
 
 
+//{"type":"NewGameResult","game":{"id":"77c91534-07cb-48f6-82e1-5e8bad1e00cf","team1":["9847ea1e-9eaf-4531-8f19-dc383cc4ef24"],"team2":["f668aff0-1999-442f-8450-68408946319e"],"winner":2}}
+export interface GameResult {
+    id: string
+    team1: string[]
+    team2: string[]
+    winner: number
+
+    // dashboard-only fields
+    time: string
+}
+
+
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
 
 interface UseDashboardOptions {
@@ -75,6 +87,7 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
     const [queueList, setQueueList] = useState<QueueInfo[]>([])
     const [waitingGames, setWaitingGames] = useState<GameInfo[]>([])
     const [gameList, setGameList] = useState<GameInfo[]>([])
+    const [gameResults, setGameResults] = useState<GameResult[]>([])
     const [status, setStatus] = useState<ConnectionStatus>("disconnected")
     const [settings, setSettings] = useState<AppSettings | null>(null)
     const wsRef = useRef<WebSocket | null>(null)
@@ -132,6 +145,10 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
                 if (message.type === "SettingsUpdate") {
                     setSettings(message.settings)
                 }
+                if (message.type === "NewGameResult") {
+                    message.game.time = new Date().toLocaleTimeString()
+                    setGameResults(prev => [...prev, message.game])
+                }
             } catch {
                 console.error("Failed to parse snapshot", event.data)
             }
@@ -165,7 +182,7 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
         }
     }, [])
 
-    return { data, playerList, lobbyList, queueList, waitingGames, gameList, status, settings, connect, disconnect, updateSettings }
+    return { data, playerList, lobbyList, queueList, waitingGames, gameList, gameResults, status, settings, connect, disconnect, updateSettings }
 }
 
 

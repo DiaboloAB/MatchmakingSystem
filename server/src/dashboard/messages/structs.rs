@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::structs::{Game, Lobby, Player, PlayerStatus, QueueEntry};
+use crate::structs::{Game, GameResult, Lobby, Player, PlayerStatus, QueueEntry};
 
 // ─── Client → Server ──────────────────────────────────────────────────────────
 
@@ -35,6 +35,12 @@ pub enum DashboardServerMessage {
     },
     SettingsUpdate {
         settings: AppSettings,
+    },
+    GameHisory {
+        games: Vec<GameResult>,
+    },
+    NewGameResult {
+        game: GameResult,
     },
 }
 

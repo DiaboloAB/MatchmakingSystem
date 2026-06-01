@@ -1,12 +1,13 @@
 use crate::{
     app_state::AppState,
+    dashboard::messages::structs::DashboardServerMessage,
     player_connection::{
         db::{db_save_game_result, db_save_player},
         messages::structs::ServerMessage,
     },
     structs::{Game, GameResult, PlayerStatus, mmr_to_rank},
 };
-use rand::{RngExt, seq::IndexedRandom};
+use rand::RngExt;
 use uuid::Uuid;
 
 pub async fn game_simulation_loop(state: AppState) {
@@ -26,8 +27,10 @@ async fn check_ongoing_games(state: &AppState) {
         let mut ongoing = state.ongoing_games.write().await;
 
         ongoing.retain(|_, game| {
-            let mut time_limit = std::time::Duration::from_secs(rand::random_range(600..=1200));
-            time_limit = time_limit.mul_f32(1.0 / sim_speed);
+            // 20-40 minutes simulated time, scaled by sim_speed
+            let mut time_limit = std::time::Duration::from_secs(rand::random_range(1200..2400));
+            time_limit =
+                std::time::Duration::from_secs_f64(time_limit.as_secs_f64() / sim_speed as f64);
             let elapsed_time = game.start_time.elapsed();
             if elapsed_time >= time_limit {
                 log::info!(
@@ -105,6 +108,7 @@ async fn resolve_game(state: &AppState, game: Game) {
     };
     db_save_game_result(&state.db, &game_result).await;
     update_players(state, &game_result).await;
+    send_new_game_to_dashboard(state, &game_result).await;
 }
 
 async fn update_players(state: &AppState, game_result: &GameResult) {
@@ -137,7 +141,7 @@ async fn update_players(state: &AppState, game_result: &GameResult) {
     const K_VISIBLE: f64 = 16.0;
     const K_HIDDEN: f64 = 64.0;
 
-    let visible_delta = K_VISIBLE * (1.0 - expected_winner); // winner gains, loser loses
+    let visible_delta = K_VISIBLE * (1.0 - expected_winner);
     let hidden_delta = K_HIDDEN * (1.0 - expected_winner);
 
     let mut notifications: Vec<(Uuid, ServerMessage)> = Vec::new();
@@ -168,24 +172,6 @@ async fn update_players(state: &AppState, game_result: &GameResult) {
                     p.losses.push(game_result.id)
                 }
 
-                // let gap = p.true_skill - p.mmr;
-                // p.anomaly = if gap > 300.0 {
-                //     Some("smurf".into())
-                // } else if gap < -300.0 {
-                //     Some("boosted".into())
-                // } else {
-                //     None
-                // };
-
-                // if let Some(ref anomaly) = p.anomaly {
-                //     log::warn!(
-                //         "Anomaly detected for player {}: {} (gap: {:.0})",
-                //         p.name,
-                //         anomaly,
-                //         gap
-                //     );
-                // }
-
                 notifications.push((
                     *player_id,
                     ServerMessage::GameResult {
@@ -212,4 +198,11 @@ async fn update_players(state: &AppState, game_result: &GameResult) {
     for (player_id, msg) in notifications {
         state.send_to(player_id, msg).await;
     }
+}
+
+async fn send_new_game_to_dashboard(state: &AppState, game: &GameResult) {
+    let msg = DashboardServerMessage::NewGameResult { game: game.clone() };
+
+    let dashboard_tx = state.dashboard_tx.read().await;
+    let _ = dashboard_tx.send(msg);
 }

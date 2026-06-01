@@ -138,12 +138,14 @@ pub enum GameStatus {
     Finished,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GameResult {
     pub id: Uuid,
     pub team1: Vec<Uuid>,
     pub team2: Vec<Uuid>,
     pub winner: u8,
+    #[serde(skip_serializing)]
     pub start_time: std::time::Instant,
+    #[serde(skip_serializing)]
     pub duration: std::time::Duration,
 }

@@ -1,5 +1,6 @@
 import { LivePlayerChart } from "@/components/live-player-chart"
 import { RankDistributionChart } from "@/components/rank-distribution-chart"
+import { RecentGameCard } from "@/components/recent-game-card"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import { TopPlayersCard } from "@/components/top-player-card"
@@ -26,8 +27,8 @@ export default function Page() {
                 <TopPlayersCard />
               </div>
 
-              <div className="lg:col-span-2 flex items-center justify-center rounded-xl border border-dashed text-muted-foreground">
-                Future Component (e.g., Recent Match History)
+              <div className="lg:col-span-2">
+                <RecentGameCard />
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
-    app_state::AppState,
+    app_state::{AppState, Settings},
     player_connection::messages::structs::ServerMessage,
     structs::{Game, PlayerStatus},
 };
@@ -17,23 +17,9 @@ pub async fn matchmaking_loop(state: AppState) {
 async fn try_form_matches(state: &AppState) {
     let mut queueing_lobbys = state.queueing_lobbys.write().await;
 
-    // matchmaking logic :
-    // set mmr difference x
-    // match lobby with a mmr difference lower than x
-    // the mmr difference augment by y every z seconds in queue per lobby
-    // each lobby have a different x based on the time they are in queue
-    // if lobby1 mmr difference and lobby2 mmr difference are correct, create a match and remove them from the queue
-
-    // implementation:
     if queueing_lobbys.len() < 2 {
         return;
     }
-
-    // for now we will just match team that have a lobby full
-    // so a game is only 2 lobby of team_size;
-
-    // let settings = state.settings.read().await;
-    // let team_size = settings.team_size;
 
     for i in 0..queueing_lobbys.len() {
         for j in (i + 1)..queueing_lobbys.len() {
