@@ -154,37 +154,27 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid, p
                         }
                     }
                 }
-                "GameResult" => {
-                    let choice = rand::random_range(0..100);
-
-                    if choice < 10 {
-                        println!("[Bot {}] Done playing for now. Disconnecting.", bot_id);
-                        break;
-                    } else if choice < 30 {
-                        // 30 sec to 2 min break
-                        let break_time = rand::random_range(30..120);
-                        println!(
-                            "[Bot {}] Taking a {}s break in lobby...",
-                            bot_id, break_time
-                        );
-                        sleep(Duration::from_secs(break_time)).await;
-                    } else {
-                        sleep(Duration::from_millis(rand::random_range(1500..4000))).await;
-                    }
-
-                    let req = serde_json::json!({ "type": "SearchGame" });
-                    if ws_tx
-                        .send(Message::Text(req.to_string().into()))
-                        .await
-                        .is_err()
-                    {
-                        break;
-                    }
-                }
+                "GameResult" => {}
                 "StatusUpdate" => {
                     let status = msg.get("status").and_then(|s| s.as_str()).unwrap_or("");
                     if status == "Idle" {
-                        sleep(Duration::from_millis(rand::random_range(1000..3000))).await;
+                        let choice = rand::random_range(0..100);
+
+                        if choice < 10 {
+                            println!("[Bot {}] Done playing for now. Disconnecting.", bot_id);
+                            break;
+                        } else if choice < 30 {
+                            // 30 sec to 2 min break
+                            let break_time = rand::random_range(30..120);
+                            println!(
+                                "[Bot {}] Taking a {}s break in lobby...",
+                                bot_id, break_time
+                            );
+                            sleep(Duration::from_secs(break_time)).await;
+                        } else {
+                            sleep(Duration::from_millis(rand::random_range(1500..4000))).await;
+                        }
+
                         let req = serde_json::json!({ "type": "SearchGame" });
                         if ws_tx
                             .send(Message::Text(req.to_string().into()))
