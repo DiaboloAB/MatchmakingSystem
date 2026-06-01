@@ -61,6 +61,8 @@ pub struct DashboardSnapshot {
     pub queueing_lobbies: usize,
     pub waiting_games: usize,
     pub ongoing_games: usize,
+    pub average_queue_time: f64,
+    pub successful_match_rate: f64,
 }
 
 // ─── Serializable wrappers for types that contain Instant ────────────────────

@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-//{"type":"Snapshot","snapshot":{"total_player":49,"connected_players":0,"lobby_number":0,"game_number":0}}
+//{"type":"Snapshot","snapshot":{"total_player":96,"total_finished_game":89,"connected_players":13,"lobby_number":12,"game_number":1,"queueing_lobbies":2,"waiting_games":3,"ongoing_games":1}}
 export interface DashboardSnapshot {
     total_player: number
     total_finished_game: number
     connected_players: number
     lobby_number: number
     game_number: number
+    queueing_lobbies: number
+    waiting_games: number
+    ongoing_games: number
+    average_queue_time: number
+    successful_match_rate: number
 }
 
 //{ "type": "PlayerList", "players": [{"id":"dd693c40-f2b7-48b6-b1d3-cc232cb5a017","name":"ultra-brothers","mmr":1000.0,"true_skill":1000.0,"status":{"NeedConfirmation":{"game_id":"e9e3b91a-fc12-4174-a5b7-ad9dbf3ddd14"}},"lobby":"bcdadfbf-217c-4f1f-9152-d5097bba360a","wins":[],"losses":[],"skills":["lewd","steepness","boletes","lateness"]}]} }

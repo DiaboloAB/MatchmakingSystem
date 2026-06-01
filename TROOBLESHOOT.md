@@ -89,6 +89,21 @@ Two options for simulating network problems:
 **OS level (`tc netem`):**
 ```bash
 sudo tc qdisc add dev lo root netem delay 200ms loss 10%
+
+#or just delay with no loss
+sudo tc qdisc add dev lo root netem delay 500ms 100ms
+
+# or just loss with no delay
+sudo tc qdisc add dev lo root netem loss 20%
+
+#corrupt packets
+sudo tc qdisc add dev lo root netem corrupt 5%
+
+# remove when done
+sudo tc qdisc del dev lo root
+
+# show current rules
+tc qdisc show dev lo
 ```
 Affects all traffic on the loopback interface indiscriminately. Good for realistic
 end-to-end testing. Hard to target specific message types.
@@ -97,17 +112,16 @@ end-to-end testing. Hard to target specific message types.
 ```rust
 async fn send_with_constraints(ws_tx, msg, loss_rate_percent: 10, max_latency_ms: 2000)
 ```
-Targets specific messages (e.g., only delay `ConfirmGame` packets). Easy to isolate
-which state transition is being tested. Easier to debug when something breaks.
+Targets specific messages, we put delay or loss packet to messages. The most interesting one is the game confirmation message.
 
 **Decision:** implement both. Application-level for targeted fault injection during
 development. `tc netem` for the live demo to show real network degradation with no
 code changes.
 
 **Important nuance:** WebSocket runs over TCP. `tc netem` packet loss does not drop
-messages — TCP retransmits them. The observable effect is increased latency, which
-causes confirmation timeouts to fire. This is actually the interesting behavior:
-showing that application-level timeouts handle TCP-level degradation correctly.
+messages — TCP retransmits them. This will just cause extra delay.
+
+
 
 ## Part 2 — Technical Problems & Solutions
 

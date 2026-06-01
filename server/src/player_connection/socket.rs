@@ -15,7 +15,10 @@ use crate::{
         db::{db_load_player, db_save_player},
         messages::{
             game::{cancel_research, confirm_game, find_game},
-            lobby::{create_new_lobby, display_lobby, join_existing_lobby, leave_lobby},
+            lobby::{
+                create_new_lobby, display_lobby, join_existing_lobby, leave_lobby,
+                remove_player_from_lobby,
+            },
             structs::{ClientMessage, ServerMessage},
         },
     },
@@ -129,6 +132,22 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
         _ = &mut send_task => recv_task.abort(),
         _ = &mut recv_task => send_task.abort(),
     }
+
+    let player = {
+        let players = state.players.read().await;
+        match players.get(&player_id).cloned() {
+            Some(p) => p,
+            None => {
+                log::warn!("Could not find player {} for cleanup", player_id);
+                return;
+            }
+        }
+    };
+
+    // 4. Log and clean up safely
+    log::info!("Player final state: {:?}", player);
+    log::info!("Cleaning up player {} connection", player_id);
+    remove_player_from_lobby(&player, &state).await;
     db_save_player(&state.db, &player).await;
     cleanup(player_id, &state).await;
 }
@@ -160,6 +179,7 @@ async fn handle_message(player_id: Uuid, text: &str, state: &AppState) {
     };
 
     match msg {
+        ClientMessage::PlayerInfo => player_info(player, state).await,
         ClientMessage::JoinLobby { id } => match id {
             Some(lobby_id) => join_existing_lobby(player, lobby_id, state).await,
             None => create_new_lobby(player, state).await,
@@ -173,4 +193,16 @@ async fn handle_message(player_id: Uuid, text: &str, state: &AppState) {
             log::warn!("Unhandled message from {}: {}", player_id, text);
         }
     }
+}
+
+async fn player_info(player: Player, state: &AppState) {
+    log::info!("Player {} requested info", player.name);
+    state
+        .send_to(
+            player.id,
+            ServerMessage::PlayerInfo {
+                player: player.into(),
+            },
+        )
+        .await;
 }

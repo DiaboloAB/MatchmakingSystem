@@ -55,6 +55,33 @@ impl Player {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct PlayerInfo {
+    pub id: Uuid,
+    pub name: String,
+    pub mmr: f64,
+    pub debug_rank: String,
+    pub status: PlayerStatus,
+    pub lobby: Option<Uuid>,
+    pub wins: Vec<Uuid>,
+    pub losses: Vec<Uuid>,
+}
+
+impl From<Player> for PlayerInfo {
+    fn from(player: Player) -> Self {
+        Self {
+            id: player.id,
+            name: player.name,
+            mmr: player.mmr,
+            debug_rank: player.debug_rank,
+            status: player.status,
+            lobby: player.lobby,
+            wins: player.wins,
+            losses: player.losses,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum PlayerStatus {
     Idle,

@@ -71,6 +71,26 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
         let lobbys = state.lobbys.read().await;
         let games = state.ongoing_games.read().await;
         let total_game = state.total_game.read().await;
+        let queueing_lobbys = state.queueing_lobbys.read().await;
+        let waiting_games = state.waiting_games.read().await;
+        let ongoing_games = state.ongoing_games.read().await;
+        let average_queue_time = {
+            let samples = state.debug_avg_queue_time.read().await;
+            if samples.is_empty() {
+                0.0
+            } else {
+                samples.iter().sum::<f64>() / samples.len() as f64
+            }
+        };
+        let successful_match_rate = {
+            let samples = state.debug_successful_match_rate.read().await;
+            if samples.is_empty() {
+                0.0
+            } else {
+                let successful = samples.iter().filter(|&&x| x).count();
+                successful as f64 / samples.len() as f64
+            }
+        };
 
         let snapshot = DashboardSnapshot {
             total_player: *total_player,
@@ -78,9 +98,11 @@ pub async fn dashboard_broadcast_loop(state: AppState) {
             connected_players: players.len(),
             lobby_number: lobbys.len(),
             game_number: games.len(),
-            queueing_lobbies: 0,
-            waiting_games: 0,
-            ongoing_games: 0,
+            queueing_lobbies: queueing_lobbys.len(),
+            waiting_games: waiting_games.len(),
+            ongoing_games: ongoing_games.len(),
+            average_queue_time,
+            successful_match_rate,
         };
 
         let _ = state

@@ -50,7 +50,7 @@ impl Default for Settings {
             points_per_div: 100,
             // simulation_speed: 1.0,
             simulation_speed: 20.0,
-            confirmation_time: -1.0,
+            confirmation_time: 60.0, // -1 means infinite
 
             matchmaking_delta: 10.0,
             matchmaking_time_factor: 10.0,
@@ -72,6 +72,11 @@ pub struct AppState {
 
     pub dashboard_tx: Arc<RwLock<mpsc::UnboundedSender<DashboardServerMessage>>>,
     pub settings: Arc<RwLock<Settings>>,
+
+    // last 25 queue times for calculating average
+    pub debug_avg_queue_time: Arc<RwLock<Vec<f64>>>,
+    // last 25 games started or cancelled
+    pub debug_successful_match_rate: Arc<RwLock<Vec<bool>>>,
 }
 
 impl AppState {
@@ -90,6 +95,8 @@ impl AppState {
                 mpsc::unbounded_channel::<DashboardServerMessage>().0,
             )),
             settings: Arc::new(RwLock::new(Settings::default())),
+            debug_avg_queue_time: Arc::new(RwLock::new(Vec::new())),
+            debug_successful_match_rate: Arc::new(RwLock::new(Vec::new())),
         }
     }
 

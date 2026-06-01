@@ -92,19 +92,24 @@ pub async fn leave_lobby(player: Player, state: &AppState) {
             .await;
         return;
     }
-    let mut empty_lobby_id: Option<Uuid> = None;
-    if let Some(l) = lobbys.get_mut(&player.lobby.unwrap_or(Uuid::nil())) {
-        l.players.retain(|&id| id != player.id);
-        if l.players.is_empty() {
-            empty_lobby_id = Some(l.id);
-        }
 
-        if l.owner == player.id {
-            if let Some(&new_owner) = l.players.first() {
-                l.owner = new_owner;
-            } else {
-                empty_lobby_id = Some(l.id);
-            }
+    let lobby_id = match player.lobby {
+        Some(id) => id,
+        None => {
+            state
+                .send_error(player.id, "You are not in a lobby".to_string())
+                .await;
+            return;
+        }
+    };
+
+    if let Some(l) = lobbys.get_mut(&lobby_id) {
+        l.players.retain(|&id| id != player.id);
+
+        if l.owner == player.id
+            && let Some(&new_owner) = l.players.first()
+        {
+            l.owner = new_owner;
         }
         {
             let mut players = state.players.write().await;
@@ -113,18 +118,42 @@ pub async fn leave_lobby(player: Player, state: &AppState) {
                 p.lobby = None;
             }
         }
-        state
-            .send_to(player.id, ServerMessage::LobbyLeft { lobby_id: l.id })
-            .await;
-
-        if let Some(lobby_id) = empty_lobby_id {
+        if l.players.is_empty() {
+            log::info!("Lobby {} is now empty, deleting", l.id);
             lobbys.remove(&lobby_id);
         }
-        return;
     }
 
-    if let Some(empty_lobby_id) = empty_lobby_id {
-        lobbys.remove(&empty_lobby_id);
+    state
+        .send_to(player.id, ServerMessage::LobbyLeft { lobby_id })
+        .await;
+}
+
+pub async fn remove_player_from_lobby(player: &Player, state: &AppState) {
+    log::info!("Removing player {} from lobby", player.name);
+    let mut lobbys = state.lobbys.write().await;
+
+    let lobby_id = match player.lobby {
+        Some(id) => id,
+        None => {
+            return;
+        }
+    };
+
+    if let Some(l) = lobbys.get_mut(&lobby_id) {
+        log::info!("Player {} was in lobby {}, removing", player.name, lobby_id);
+        l.players.retain(|&id| id != player.id);
+
+        if l.owner == player.id
+            && let Some(&new_owner) = l.players.first()
+        {
+            l.owner = new_owner;
+        }
+
+        if l.players.is_empty() {
+            log::info!("Lobby {} is now empty, deleting", l.id);
+            lobbys.remove(&lobby_id);
+        }
     }
 }
 

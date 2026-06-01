@@ -22,6 +22,9 @@ struct Args {
 
     #[arg(long, default_value_t = 0.8)]
     existing_ratio: f32,
+
+    #[arg(long, default_value_t = false)]
+    packet_loss: bool,
 }
 
 async fn load_existing_player_ids(db_path: &str, limit: usize) -> Vec<Uuid> {
@@ -57,9 +60,7 @@ async fn load_existing_player_ids(db_path: &str, limit: usize) -> Vec<Uuid> {
     ids
 }
 
-async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid) {
-    let url = format!("ws://{}:{}/ws/{}", host, port, player_id);
-
+async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid, packet_loss: bool) {
     loop {
         let url = format!("ws://{}:{}/ws/{}", host, port, player_id);
 
@@ -79,11 +80,11 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid) {
         let (mut ws_tx, mut ws_rx) = ws_stream.split();
 
         loop {
-            let msg = match tokio::time::timeout(Duration::from_secs(60), ws_rx.next()).await {
+            let msg = match tokio::time::timeout(Duration::from_secs(200), ws_rx.next()).await {
                 Ok(Some(Ok(Message::Text(text)))) => text,
                 Ok(_) => break,
                 Err(_) => {
-                    println!("[Bot {}] Stuck for 60s, reconnecting", bot_id);
+                    println!("[Bot {}] Stuck for 200s, reconnecting", bot_id);
                     break;
                 }
             };
@@ -123,29 +124,33 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid) {
                     }
                 }
                 "GameFound" => {
-                    sleep(Duration::from_millis(rand::random_range(500..3000))).await;
+                    sleep(Duration::from_millis(rand::random_range(10..100))).await;
 
                     if let Some(game_id) = msg.get("game_id").and_then(|id| id.as_str()) {
                         let req = serde_json::json!({ "type": "ConfirmGame", "id": game_id });
-                        // if ws_tx
-                        //     .send(Message::Text(req.to_string().into()))
-                        //     .await
-                        //     .is_err()
-                        // {
-                        //     break;
-                        // }
 
-                        // send w/ simulated network constraints
-                        if send_with_constraints(
-                            &mut ws_tx,
-                            Message::Text(req.to_string().into()),
-                            10,
-                            2000,
-                        )
-                        .await
-                        .is_err()
-                        {
-                            break;
+                        if !packet_loss {
+                            // send w/o constraints first to ensure it reaches
+                            if ws_tx
+                                .send(Message::Text(req.to_string().into()))
+                                .await
+                                .is_err()
+                            {
+                                break;
+                            }
+                        } else {
+                            // send w/ simulated network constraints
+                            if send_with_constraints(
+                                &mut ws_tx,
+                                Message::Text(req.to_string().into()),
+                                10,
+                                2000,
+                            )
+                            .await
+                            .is_err()
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -156,7 +161,8 @@ async fn simulate_bot(host: String, port: u16, bot_id: usize, player_id: Uuid) {
                         println!("[Bot {}] Done playing for now. Disconnecting.", bot_id);
                         break;
                     } else if choice < 30 {
-                        let break_time = rand::random_range(10..30);
+                        // 30 sec to 2 min break
+                        let break_time = rand::random_range(30..120);
                         println!(
                             "[Bot {}] Taking a {}s break in lobby...",
                             bot_id, break_time
@@ -256,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let startup_delay = rand::random_range(10..2000);
         sleep(Duration::from_millis(startup_delay)).await;
         handles.push(tokio::spawn(async move {
-            simulate_bot(host, port, i, player_id).await;
+            simulate_bot(host, port, i, player_id, args.packet_loss).await;
         }));
     }
     for i in actual_existing..actual_existing + actual_new {
@@ -266,7 +272,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let startup_delay = rand::random_range(10..2000);
         sleep(Duration::from_millis(startup_delay)).await;
         handles.push(tokio::spawn(async move {
-            simulate_bot(host, port, i, player_id).await;
+            simulate_bot(host, port, i, player_id, args.packet_loss).await;
         }));
     }
 

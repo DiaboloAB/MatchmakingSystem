@@ -49,6 +49,10 @@ async fn check_ongoing_games(state: &AppState) {
 
     for game in finished_games {
         resolve_game(state, game).await;
+        {
+            let mut total_game = state.total_game.write().await;
+            *total_game += 1;
+        }
     }
 }
 
@@ -109,10 +113,6 @@ async fn resolve_game(state: &AppState, game: Game) {
     db_save_game_result(&state.db, &game_result).await;
     update_players(state, &game_result).await;
     send_new_game_to_dashboard(state, &game_result).await;
-    {
-        let mut total_game = state.total_game.write().await;
-        *total_game += 1;
-    }
 }
 
 const K_VISIBLE: f64 = 16.0 * 2.0;

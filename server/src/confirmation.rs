@@ -36,6 +36,7 @@ async fn check_confirmations(state: &AppState) {
                             .update_lobby_status(*lobby_id, PlayerStatus::Idle)
                             .await;
                     }
+                    add_successful_match_sample(&state, false).await;
                 }
             }
         }
@@ -74,6 +75,8 @@ async fn check_confirmations(state: &AppState) {
                 ServerMessage::GameStarting { game_id: *game_id },
             )
             .await;
+
+        add_successful_match_sample(&state, true).await;
     }
 
     let count = confirmed_games.len();
@@ -98,4 +101,12 @@ async fn check_confirmations(state: &AppState) {
     }
 
     log::info!("Moved {} games from waiting to ongoing", count);
+}
+
+async fn add_successful_match_sample(state: &AppState, success: bool) {
+    let mut samples = state.debug_successful_match_rate.write().await;
+    samples.push(success);
+    if samples.len() > 25 {
+        samples.remove(0);
+    }
 }

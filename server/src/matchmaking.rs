@@ -69,6 +69,8 @@ async fn try_form_matches(state: &AppState) {
                     waiting_games.insert(game.id, game.clone());
                 }
 
+                add_queue_time_sample(state, lobby1.start_time.elapsed().as_secs_f64()).await;
+
                 state
                     .update_lobby_status(
                         lobby1.lobby_id,
@@ -86,5 +88,13 @@ async fn try_form_matches(state: &AppState) {
                 break;
             }
         }
+    }
+}
+
+async fn add_queue_time_sample(state: &AppState, queue_time: f64) {
+    let mut samples = state.debug_avg_queue_time.write().await;
+    samples.push(queue_time);
+    if samples.len() > 25 {
+        samples.remove(0);
     }
 }

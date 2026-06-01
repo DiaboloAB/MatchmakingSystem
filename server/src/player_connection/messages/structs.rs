@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::structs::{Player, PlayerStatus};
+use crate::structs::{Player, PlayerInfo, PlayerStatus};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type")]
@@ -56,12 +56,15 @@ pub enum ServerMessage {
     StatusUpdate {
         status: PlayerStatus,
     },
+    PlayerInfo {
+        player: PlayerInfo,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
-    DisplayPlayer { id: Option<Uuid> },
+    PlayerInfo,
     JoinLobby { id: Option<Uuid> },
     DisplayLobby,
     LeaveLobby,

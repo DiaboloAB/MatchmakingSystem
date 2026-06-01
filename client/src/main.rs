@@ -60,14 +60,13 @@ fn parse_command(line: &str) -> Result<serde_json::Value, String> {
 
 fn print_help() {
     println!("Commands:");
+    println!("  PlayerInfo            → show player info");
     println!("  JoinLobby [uuid]      → join a new or existing lobby");
     println!("  DisplayLobby          → show current lobby");
     println!("  LeaveLobby            → leave current lobby");
     println!("  SearchGame            → start matchmaking");
     println!("  CancelSearch          → cancel matchmaking");
     println!("  ConfirmGame <uuid>    → confirm a found game");
-    println!("  DisplayPlayer [uuid]  → show player info");
-    println!("  Help                  → show this");
     println!("  help / h              → show this (local alias)");
     println!("  quit / q              → disconnect\n");
 }
