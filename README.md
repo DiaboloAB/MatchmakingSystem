@@ -1,66 +1,109 @@
 # Matchmaking Server & Simulation
 
-Here is a matchmaking server built with Rust, Axum, and Tokio. 
-This project features a central game server, a dashboard for real-time monitoring, and a client simulator to test matchmaking logic and network resilience.
+This project is a matchmaking system built with Rust, Axum, and Tokio. Developed as a System Design project, it focuses on how data flows, degrades, and is recovered across a distributed system.
 
-The goal is to design a system, here are the different parts of the project:
-- a data source: player connections, matchmaking requests, and game results are stored in an SQLite database using `sqlx`.
-- a data transmission layer: WebSockets are used for real-time communication between clients, the server, and the dashboard.
-- a data collection: the server collects metrics on matchmaking times, queue lengths, and game outcomes, which are streamed to the dashboard for visualization.
-- an ai-based processing layer: I thought about implementing an based algorithm, but it's not in the scope of this project, so I implemented a simple Elo-based matchmaking system instead.
-- a final decision layer: the server runs a matchmaking loop that continuously checks for players in the queue, forms lobbies, and simulates matches.
-- and finally a web-based dashboard: a next(react) frontend with shadcn/ui that connects to the server via WebSockets to display live matchmaking data, player stats, and game results.
+This project features a central matchmaking server, a real-time monitoring dashboard, and a multi-player simulator to test matchmaking logic and network resilience under intentional constraints.
+
+## Project Scope & Requirements
+
+This project maps to the following system design requirements:
+
+- **Data Generation**: A dedicated simulator spawns N players generating continuous state events.
+- **Transmission + Constraint**: Real-time WebSockets with fault injection (AFK, delays, disconnects, and OS-level network degradation).
+- **Data Collection**: The server collects all player, match, and lobby events in memory and persists history to SQLite.
+- **AI-based Processing**: Dual MMR anomaly detection (identifying "smurf" or "boosted" accounts).
+- **Decision / Action**: Automated match formation, MMR updates, penalties, and re-queuing.
+- **Visualization**: A Next.js dashboard providing a live feed of the server state via WebSockets.
 
 ## Components
 
-1. **Server (`main.rs`)**: The core backend running async matchmaking loops, game simulations, and client state management.
-2. **Dashboard (`useDashboard.ts`)**: A React-based web interface that connects to a dedicated WebSocket route (`/ws/dashboard`) to stream live server snapshots, queue info, and active games.
-3. **Client Simulator**: A CLI application simulating players connecting, forming lobbies, and queuing.
+1.  **✅Server (`/server`)**: The core engine running async matchmaking loops, game simulations, and client state management.
+2.  **✅Dashboard (`/ict-dashboard`)**: A React-based web interface (`/ws/dashboard`) for visualizing live queue info, active games, and player stats.
+3.  **❌ Data (`/data`)**: There is no static data; the data is generated on the fly by the simulator.
+4.  **Simulator (`/sim`)**: An automated multi-player CLI that simulates realistic player behavior, including session churn and network issues.
+5.  **Client (`/client`)**: A manual CLI application for debugging individual player connections and state transitions.
+
+## Tech Stack
+
+| Technology | Role |
+| :--- | :--- |
+| **Rust** | Server, Simulator, and Client core |
+| **Tokio** | Asynchronous runtime |
+| **Axum** | HTTP & WebSocket server |
+| **sqlx + SQLite** | Asynchronous persistence |
+| **React + Next.js** | Web dashboard |
+| **shadcn/ui** | UI Components |
 
 ## Getting Started (Linux)
 
-This project uses [`just`](https://github.com/casey/just) as a command runner for convenience.
+This project uses [`just`](https://github.com/casey/just) as a command runner.
 
 ### Running the Services
 
-Open separate terminal tabs and run the following commands:
+Open separate terminal tabs and run:
 
 ```bash
-# 1. Start the main server (binds to 127.0.0.1:12345 by default)
+# 1. Start the main server (127.0.0.1:12345)
 just run-server
 
-# 2. Start the dashboard (frontend)
+# 2. Start the dashboard
 just run-dashboard
 
-# 4. Start the simulation (simulation a bunch of players connecting, queuing, and playing matches)
-just run-sim 
+# 3. Start the simulation (spawns automated players)
+just run-sim
 
-# 3. Start a manual client (you can run multiple instances to simulate multiple players)
+# 4. Start a manual client (for debugging)
 just run-client
-
 ```
 
-### Manual Testing with Websocat
+### Manual Testing
 
-You can interact with the WebSocket server directly using `websocat`, which is highly recommended for manual testing and inspecting raw JSON payloads.
+You can interact with the WebSocket server directly using `websocat`:
 
 ```bash
 # Connect as a new player
 websocat ws://127.0.0.1:12345/ws/
-
-# Or connect with a specific UUID
-websocat ws://127.0.0.1:12345/ws/550e8400-e29b-41d4-a716-446655440000
-
 ```
 
-Once connected, you can send raw JSON commands matching the `ClientMessage` enum, e.g.:
-`{"type": "SearchGame"}`
+Send JSON commands: `{"type": "SearchGame"}`, `{"type": "JoinLobby"}`, etc.
 
-Here are the available commands for the client:
+## Documentation
 
-| Command           | Description                                      |
-|-------------------|--------------------------------------------------|
-| `{"type": "JoinLobby"}` | Joins an existing lobby.                         |
-| `{"type": "SearchGame"}` | Enters matchmaking queue.                        |
-| `{"type": "CancelSearch"}` | Leaves matchmaking queue.                        |
-| `{"type": "ConfirmGame", "id": "some-match-id"}` | Confirms a match when prompted. | 
+- [**ARCHITECTURE.md**](./ARCHITECTURE.md): Deep dive into the system design, state machine, and ranking algorithm.
+- [**TROOBLESHOOT.md**](./TROOBLESHOOT.md): Common issues like async deadlocks and state management.
+- [**DATA.md**](./DATA.md): Information regarding data generation and the lack of static data samples.
+ 
+## Use of Generative AI Tools
+
+Generative AI tools were used in this project for:
+- **Documentation**: Structuring my documentation and my idea to ensure clarity.
+- **Code Review**: Identifying potential issues in async code patterns and suggesting improvements.
+- **Simulation Script**: Generating a testing script (`/sim`) to simulate player connections and behaviors.
+- **Dashboard components**: Some components such as the ranking repartition graph, or other table were created with the help of AI.
+
+Most of the rust code and the architecture was designed and implemented by myself.
+
+## Some Sources and Inspiration
+
+- [sqlx tutorial](https://aarambhdevhub.medium.com/rust-orms-in-2026-diesel-vs-sqlx-vs-seaorm-vs-rusqlite-which-one-should-you-actually-use-706d0fe912f3)
+- [websocket with axum](https://websocket.org/guides/languages/rust/)
+- [riot games tech blogs](https://technology.riotgames.com/tags/infrastructure)
+
+### librairies
+- [random_word](https://crates.io/crates/random_word)
+- [sqlx](https://crates.io/crates/sqlx)
+- [tokio](https://crates.io/crates/tokio)
+- [clap](https://crates.io/crates/clap)
+- [uuid](https://crates.io/crates/uuid)
+- [log](https://crates.io/crates/log)
+- [env_logger](https://crates.io/crates/env_logger)
+- [serde](https://crates.io/crates/serde)
+- [axum](https://crates.io/crates/axum)
+- [futures](https://crates.io/crates/futures)
+- [serde_json](https://crates.io/crates/serde_json)
+- [names](https://crates.io/crates/names)
+- [rand](https://crates.io/crates/rand)
+
+## Video presentation
+
+[You can watch the video presentation of this project here]()
