@@ -55,6 +55,8 @@ export function SectionCards() {
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="text-muted-foreground">
             {onlinePercentage}% of userbase online
+            <br />
+            total lobbies: {data?.lobby_number || 0}
           </div>
         </CardFooter>
       </Card>
@@ -64,7 +66,7 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Queue Volume</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {data?.queueing_lobbies || 0}
+            {data ? (data.queueing_lobbies + data.waiting_games * 2) : 0}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -75,7 +77,7 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="text-muted-foreground">
-            total lobbies: {data?.lobby_number || 0}
+            ({(data?.waiting_games || 0) * 2} wating confirmation)
           </div>
         </CardFooter>
       </Card>

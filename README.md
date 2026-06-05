@@ -106,4 +106,4 @@ Most of the rust code and the architecture was designed and implemented by mysel
 
 ## Video presentation
 
-[You can watch the video presentation of this project here]()
+[You can watch the video presentation of this project here](https://youtu.be/qASIMoXsjVA)

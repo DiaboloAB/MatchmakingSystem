@@ -179,10 +179,10 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
         }
     }, [connect])
 
-    // reconnect when pressing key ctrl + "r"
+    // reconnect when pressing Ctrl+ Shift+R
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey && event.key === "r") {
+            if (event.ctrlKey && event.shiftKey && event.key === "R") {
                 connect()
             }
         }
