@@ -179,6 +179,19 @@ export function useDashboard({ port = 12345, host = "127.0.0.1" }: UseDashboardO
         }
     }, [connect])
 
+    // reconnect when pressing key ctrl + "r"
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.ctrlKey && event.key === "r") {
+                connect()
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown)
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown)
+        }
+    }, [connect])
+
     const updateSettings = useCallback((newSettings: AppSettings) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({

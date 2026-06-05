@@ -90,7 +90,7 @@ Two options for simulating network problems:
 ```bash
 sudo tc qdisc add dev lo root netem delay 200ms loss 10%
 
-#or just delay with no loss
+# or just delay with no loss
 sudo tc qdisc add dev lo root netem delay 500ms 100ms
 
 # or just loss with no delay

@@ -30,20 +30,20 @@ pub async fn ws_handler(
     Path(player_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Response {
-    {
-        log::info!("Checking player {} connecting", player_id);
-        let players = state.players.read().await;
-        if players.contains_key(&player_id) {
-            log::warn!(
-                "Player {} already connected, rejecting new connection",
-                player_id
-            );
-            return Response::builder()
-                .status(400)
-                .body("Player ID already connected".into())
-                .unwrap();
-        }
-    }
+    // {
+    //     log::info!("Checking player {} connecting", player_id);
+    //     let players = state.players.read().await;
+    //     if players.contains_key(&player_id) {
+    //         log::warn!(
+    //             "Player {} already connected, rejecting new connection",
+    //             player_id
+    //         );
+    //         return Response::builder()
+    //             .status(400)
+    //             .body("Player ID already connected".into())
+    //             .unwrap();
+    //     }
+    // }
 
     log::info!("Player {} connected", player_id);
     ws.on_upgrade(move |socket| handle_connection(socket, player_id, state))
@@ -77,6 +77,8 @@ pub async fn ws_handler_new_player(
 pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppState) {
     let (mut ws_tx, mut ws_rx) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<ServerMessage>();
+
+    let tx_for_cleanup = tx.clone();
 
     let player = match db_load_player(&state.db, player_id).await {
         Some(p) => {
@@ -133,7 +135,21 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
         _ = &mut recv_task => send_task.abort(),
     }
 
-    let player = {
+    let is_active_connection = {
+        let senders = state.senders.read().await;
+        if let Some(current_tx) = senders.get(&player_id) {
+            current_tx.same_channel(&tx_for_cleanup)
+        } else {
+            false
+        }
+    };
+
+    if !is_active_connection {
+        log::warn!("Connection dropped, but newer connection exists. Skipping cleanup.");
+        return;
+    }
+
+    let final_player = {
         let players = state.players.read().await;
         match players.get(&player_id).cloned() {
             Some(p) => p,
@@ -144,12 +160,14 @@ pub async fn handle_connection(socket: WebSocket, player_id: Uuid, state: AppSta
         }
     };
 
-    // 4. Log and clean up safely
-    log::info!("Player final state: {:?}", player);
+    log::info!("Player final state: {:?}", final_player);
     log::info!("Cleaning up player {} connection", player_id);
-    remove_player_from_lobby(&player, &state).await;
-    db_save_player(&state.db, &player).await;
+
     cleanup(player_id, &state).await;
+
+    remove_player_from_lobby(&final_player, &state).await;
+
+    db_save_player(&state.db, &final_player).await;
 }
 
 async fn cleanup(player_id: Uuid, state: &AppState) {

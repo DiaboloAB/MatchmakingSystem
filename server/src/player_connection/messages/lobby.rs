@@ -134,30 +134,30 @@ pub async fn leave_lobby(player: Player, state: &AppState) {
 
 pub async fn remove_player_from_lobby(player: &Player, state: &AppState) {
     log::info!("Removing player {} from lobby", player.name);
-    let mut lobbys = state.lobbys.write().await;
 
     let lobby_id = match player.lobby {
         Some(id) => id,
-        None => {
-            return;
-        }
+        None => return,
     };
 
     cancel_research_id(lobby_id, state).await;
 
-    if let Some(l) = lobbys.get_mut(&lobby_id) {
-        log::info!("Player {} was in lobby {}, removing", player.name, lobby_id);
-        l.players.retain(|&id| id != player.id);
+    {
+        let mut lobbys = state.lobbys.write().await;
 
-        if l.owner == player.id
-            && let Some(&new_owner) = l.players.first()
-        {
-            l.owner = new_owner;
-        }
+        if let Some(l) = lobbys.get_mut(&lobby_id) {
+            log::info!("Player {} was in lobby {}, removing", player.name, lobby_id);
+            l.players.retain(|&id| id != player.id);
 
-        if l.players.is_empty() {
-            log::info!("Lobby {} is now empty, deleting", l.id);
-            lobbys.remove(&lobby_id);
+            if l.owner == player.id
+                && let Some(&new_owner) = l.players.first() {
+                    l.owner = new_owner;
+                }
+
+            if l.players.is_empty() {
+                log::info!("Lobby {} is now empty, deleting", l.id);
+                lobbys.remove(&lobby_id);
+            }
         }
     }
 }

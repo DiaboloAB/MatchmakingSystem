@@ -254,7 +254,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (i, player_id) in existing_ids.into_iter().enumerate() {
         let host = args.host.clone();
         let port = args.port;
-        let startup_delay = rand::random_range(10..2000);
+        let long_or_short_delay = rand::random_range(0..5);
+        let startup_delay = if long_or_short_delay < 4 {
+            rand::random_range(10..2000)
+        } else {
+            rand::random_range(5000..20000)
+        };
         sleep(Duration::from_millis(startup_delay)).await;
         handles.push(tokio::spawn(async move {
             simulate_bot(host, port, i, player_id, args.packet_loss).await;
@@ -264,7 +269,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let host = args.host.clone();
         let port = args.port;
         let player_id = Uuid::new_v4();
-        let startup_delay = rand::random_range(10..2000);
+        let long_or_short_delay = rand::random_range(0..5);
+        let startup_delay = if long_or_short_delay < 4 {
+            rand::random_range(10..2000)
+        } else {
+            rand::random_range(5000..20000)
+        };
         sleep(Duration::from_millis(startup_delay)).await;
         handles.push(tokio::spawn(async move {
             simulate_bot(host, port, i, player_id, args.packet_loss).await;
